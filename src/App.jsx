@@ -161,6 +161,8 @@ export default function App() {
   const [projects, setProjects] = useState([]);
   const [selectedProjectId, setSelectedProjectId] = useState(null);
   const loaded = useRef(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [saveStatus, setSaveStatus] = useState(null); // null | "saving" | "saved" | "error"
 
   const [subject, setSubject] = useState("");
   const [requirement, setRequirement] = useState("");
@@ -186,23 +188,29 @@ export default function App() {
 
   useEffect(() => {
     dbLoad().then((data) => {
-      setProjects(data);
+      if (data && data.length > 0) {
+        setProjects(data);
+      }
       loaded.current = true;
+      setIsLoading(false);
+    }).catch(() => {
+      loaded.current = true;
+      setIsLoading(false);
     });
+  }, []);
+
+  const doSave = useCallback(async (data) => {
+    setSaveStatus("saving");
+    const ok = await dbSave(data);
+    setSaveStatus(ok ? "saved" : "error");
+    setTimeout(() => setSaveStatus(null), 2000);
+    return ok;
   }, []);
 
   useEffect(() => {
     if (!loaded.current) return;
-    dbSave(projects);
-  }, [projects]);
-
-  useEffect(() => {
-    const projectsRef = { current: projects };
-    projectsRef.current = projects;
-    const onBeforeUnload = () => dbSave(projectsRef.current);
-    window.addEventListener("beforeunload", onBeforeUnload);
-    return () => window.removeEventListener("beforeunload", onBeforeUnload);
-  }, [projects]);
+    doSave(projects);
+  }, [projects, doSave]);
 
   const resetForm = () => {
     setSubject(""); setRequirement(""); setContact("");
@@ -215,7 +223,7 @@ export default function App() {
 
   const canSubmit = subject.trim() && upgrades.some((u) => u.beforeSrc && u.alternatives.length > 0);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const validUpgrades = upgrades.filter((u) => u.beforeSrc && u.alternatives.length > 0).map((u, i) => ({
       ...u,
       title: u.title.trim() || "שידרוג " + (i + 1),
@@ -229,13 +237,17 @@ export default function App() {
       date: new Date().toLocaleDateString("he-IL"),
       upgrades: validUpgrades,
     };
-    setProjects((p) => [proj, ...p]);
+    const newProjects = [proj, ...projects];
+    setProjects(newProjects);
+    await doSave(newProjects);
     resetForm();
     setView("library");
   };
 
-  const deleteProject = (id) => {
-    setProjects((p) => p.filter((pr) => pr.id !== id));
+  const deleteProject = async (id) => {
+    const newProjects = projects.filter((pr) => pr.id !== id);
+    setProjects(newProjects);
+    await doSave(newProjects);
     setView("library"); setSelectedProjectId(null);
   };
 
@@ -250,18 +262,20 @@ export default function App() {
     setExtraUpgrade({ id: Date.now(), title: "", beforeSrc: null, alternatives: [] });
   };
 
-  const saveExtraUpgrade = () => {
+  const saveExtraUpgrade = async () => {
     if (!extraUpgrade.beforeSrc || !extraUpgrade.alternatives.length) return;
-    setProjects((ps) => ps.map((p) => {
+    const newProjects = projects.map((p) => {
       if (p.id !== addingToProject) return p;
       return { ...p, upgrades: [...p.upgrades, { ...extraUpgrade, title: extraUpgrade.title.trim() || "שידרוג " + (p.upgrades.length + 1) }] };
-    }));
+    });
+    setProjects(newProjects);
+    await doSave(newProjects);
     setAddingToProject(null); setExtraUpgrade(null);
   };
 
   const addAltToExisting = async (projId, upgradeId, file) => {
     const src = await readAndCompress(file);
-    setProjects((ps) => ps.map((p) => {
+    const newProjects = projects.map((p) => {
       if (p.id !== projId) return p;
       return {
         ...p,
@@ -270,8 +284,26 @@ export default function App() {
           return { ...u, alternatives: [...u.alternatives, { id: Date.now(), afterSrc: src, label: "חלופה " + (u.alternatives.length + 1) }] };
         }),
       };
-    }));
+    });
+    setProjects(newProjects);
+    await doSave(newProjects);
   };
+
+  if (isLoading) {
+    return (
+      <div className="app">
+        <div className="bg-orbs">
+          <div className="orb orb-1" />
+          <div className="orb orb-2" />
+          <div className="orb orb-3" />
+        </div>
+        <div className="loading-screen">
+          <div className="loading-spinner" />
+          <p>טוען נתונים...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -281,6 +313,14 @@ export default function App() {
           <div className="orb orb-2" />
           <div className="orb orb-3" />
         </div>
+
+        {saveStatus && (
+          <div className={`save-indicator ${saveStatus}`}>
+            {saveStatus === "saving" && "שומר..."}
+            {saveStatus === "saved" && "נשמר ✓"}
+            {saveStatus === "error" && "שגיאה בשמירה ✗"}
+          </div>
+        )}
 
         <div className="header">
           <h1>שידרוגים</h1>
