@@ -1046,18 +1046,75 @@ body {
 [data-theme="light"] .add-alt-inline { border-top-color: rgba(0,0,0,0.06); }
 [data-theme="light"] .upgrade-tabs { border-bottom-color: rgba(0,0,0,0.06); }
 
+/* Sync button */
+.sync-btn {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--glass-border-light);
+  background: var(--glass);
+  color: var(--cyan);
+  font-size: 18px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+.sync-btn:hover {
+  background: rgba(77,232,224,0.15);
+  box-shadow: 0 0 12px var(--cyan-glow);
+}
+
+/* Settings panel */
+.settings-panel {
+  margin: 0 20px 0;
+  padding: 20px 24px;
+  animation: slideDown 0.3s ease;
+}
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 /* ══════════════════════════════════════════
    RESPONSIVE
    ══════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .library-grid { grid-template-columns: 1fr; }
+  .compare-container { border-radius: 14px; }
+}
+
 @media (max-width: 600px) {
   .field-row { grid-template-columns: 1fr; }
-  .container { padding: 20px 14px; }
-  .header { padding: 12px 14px; }
-  .form-section { padding: 22px; }
-  .upload-box { width: 130px; height: 100px; }
-  .card-preview { height: 170px; }
+  .container { padding: 16px 10px; }
+  .header { padding: 10px 12px; gap: 6px; flex-wrap: wrap; }
+  .header h1 { font-size: 18px; }
+  .form-section { padding: 16px; }
+  .upload-box { width: 110px; height: 85px; }
+  .upload-row { gap: 8px; }
+  .card-preview { height: 160px; }
   .btn-primary, .nav-btn.active { border-radius: 14px; }
-  .glass-card { border-radius: 16px; }
+  .glass-card { border-radius: 14px; }
+  .nav-btn { font-size: 12px; padding: 7px 14px; }
+  .compare-meta h2 { font-size: 18px; }
+  .settings-panel { margin: 0 10px; padding: 16px; }
+  .upgrade-tabs { gap: 4px; }
+  .upgrade-tab { font-size: 12px; padding: 7px 12px; }
+  .alt-tabs { gap: 4px; padding: 10px; }
+  .alt-tab { font-size: 11px; padding: 6px 10px; }
+  .compare-meta { padding: 16px; }
+  .add-alt-inline { padding: 8px 14px; }
+  .card-info { padding: 14px 16px; }
+  .card-info h3 { font-size: 15px; }
+  .card-badges { gap: 4px; }
+  .card-badge { font-size: 10px; padding: 3px 8px; }
+  .theme-toggle, .sync-btn { width: 32px; height: 32px; font-size: 15px; }
+}
+
+@media (max-width: 380px) {
+  .header h1 { font-size: 16px; }
+  .nav-btn { font-size: 11px; padding: 6px 10px; }
+  .container { padding: 12px 8px; }
+  .upload-box { width: 90px; height: 70px; }
 }
 
 /* Save indicator */
