@@ -1,11 +1,17 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 
 const STORAGE_KEY = "before-after-projects";
+const THEME_KEY = "before-after-theme";
+const DATA_VERSION = 1;
 
 function loadProjects() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return parsed;
+    if (parsed && parsed.version && Array.isArray(parsed.projects)) return parsed.projects;
+    return [];
   } catch {
     return [];
   }
@@ -13,9 +19,11 @@ function loadProjects() {
 
 function saveProjects(projects) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
-  } catch {
-    // storage full fallback — silently fail
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: DATA_VERSION, projects }));
+  } catch (e) {
+    if (e.name === "QuotaExceededError") {
+      console.warn("localStorage full — data may not be saved");
+    }
   }
 }
 
@@ -165,8 +173,38 @@ export default function App() {
   const [addingToProject, setAddingToProject] = useState(null);
   const [extraUpgrade, setExtraUpgrade] = useState(null);
 
+  const [theme, setTheme] = useState(() => {
+    try { return localStorage.getItem(THEME_KEY) || "dark"; } catch { return "dark"; }
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    try { localStorage.setItem(THEME_KEY, theme); } catch {}
+  }, [theme]);
+
   useEffect(() => {
     saveProjects(projects);
+  }, [projects]);
+
+  useEffect(() => {
+    const onBeforeUnload = () => saveProjects(projects);
+    window.addEventListener("beforeunload", onBeforeUnload);
+
+    const onStorage = (e) => {
+      if (e.key === STORAGE_KEY && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          const synced = Array.isArray(parsed) ? parsed : parsed.projects || [];
+          setProjects(synced);
+        } catch {}
+      }
+    };
+    window.addEventListener("storage", onStorage);
+
+    return () => {
+      window.removeEventListener("beforeunload", onBeforeUnload);
+      window.removeEventListener("storage", onStorage);
+    };
   }, [projects]);
 
   const resetForm = () => {
@@ -249,7 +287,14 @@ export default function App() {
 
         <div className="header">
           <h1>שידרוגים</h1>
-          <div style={{ display: "flex", gap: 6 }}>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <button
+              className="theme-toggle"
+              onClick={() => setTheme((t) => t === "dark" ? "light" : "dark")}
+              title={theme === "dark" ? "מצב בהיר" : "מצב כהה"}
+            >
+              {theme === "dark" ? "☀️" : "🌙"}
+            </button>
             <button className={"nav-btn" + (view === "library" ? " active" : "")} onClick={() => { setView("library"); setSelectedProjectId(null); setAddingToProject(null); }}>ספריה</button>
             <button className={"nav-btn" + (view === "add" ? " active" : "")} onClick={() => { setView("add"); setAddingToProject(null); }}>פרויקט חדש</button>
           </div>
