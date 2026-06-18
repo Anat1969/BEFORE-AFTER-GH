@@ -1,31 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import { loadProjects as dbLoad, saveProjects as dbSave } from "./db.js";
 
-const STORAGE_KEY = "before-after-projects";
 const THEME_KEY = "before-after-theme";
-const DATA_VERSION = 1;
-
-function loadProjects() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) return parsed;
-    if (parsed && parsed.version && Array.isArray(parsed.projects)) return parsed.projects;
-    return [];
-  } catch {
-    return [];
-  }
-}
-
-function saveProjects(projects) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: DATA_VERSION, projects }));
-  } catch (e) {
-    if (e.name === "QuotaExceededError") {
-      console.warn("localStorage full — data may not be saved");
-    }
-  }
-}
 
 function fileToDataUrl(file) {
   return new Promise((resolve) => {
@@ -33,6 +9,31 @@ function fileToDataUrl(file) {
     r.onload = (e) => resolve(e.target.result);
     r.readAsDataURL(file);
   });
+}
+
+function compressImage(dataUrl, maxSize = 1200, quality = 0.6) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      let { width, height } = img;
+      if (width > maxSize || height > maxSize) {
+        const ratio = Math.min(maxSize / width, maxSize / height);
+        width = Math.round(width * ratio);
+        height = Math.round(height * ratio);
+      }
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL("image/jpeg", quality));
+    };
+    img.src = dataUrl;
+  });
+}
+
+async function readAndCompress(file) {
+  const raw = await fileToDataUrl(file);
+  return compressImage(raw);
 }
 
 function ImageCompareSlider({ beforeSrc, afterSrc }) {
@@ -75,14 +76,14 @@ function UpgradeFormBlock({ upgrade, index, onChange, onRemove, total }) {
   const handleBeforeFile = async (e) => {
     const f = e.target.files[0];
     if (!f) return;
-    const src = await fileToDataUrl(f);
+    const src = await readAndCompress(f);
     onChange({ ...upgrade, beforeSrc: src });
   };
 
   const handleAltFile = async (e) => {
     const f = e.target.files[0];
     if (!f) return;
-    const src = await fileToDataUrl(f);
+    const src = await readAndCompress(f);
     const newAlts = [...upgrade.alternatives, { id: Date.now(), afterSrc: src, label: "חלופה " + (upgrade.alternatives.length + 1) }];
     onChange({ ...upgrade, alternatives: newAlts });
   };
@@ -157,8 +158,9 @@ function UpgradeFormBlock({ upgrade, index, onChange, onRemove, total }) {
 
 export default function App() {
   const [view, setView] = useState("library");
-  const [projects, setProjects] = useState(loadProjects);
+  const [projects, setProjects] = useState([]);
   const [selectedProjectId, setSelectedProjectId] = useState(null);
+  const loaded = useRef(false);
 
   const [subject, setSubject] = useState("");
   const [requirement, setRequirement] = useState("");
@@ -183,28 +185,23 @@ export default function App() {
   }, [theme]);
 
   useEffect(() => {
-    saveProjects(projects);
+    dbLoad().then((data) => {
+      setProjects(data);
+      loaded.current = true;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!loaded.current) return;
+    dbSave(projects);
   }, [projects]);
 
   useEffect(() => {
-    const onBeforeUnload = () => saveProjects(projects);
+    const projectsRef = { current: projects };
+    projectsRef.current = projects;
+    const onBeforeUnload = () => dbSave(projectsRef.current);
     window.addEventListener("beforeunload", onBeforeUnload);
-
-    const onStorage = (e) => {
-      if (e.key === STORAGE_KEY && e.newValue) {
-        try {
-          const parsed = JSON.parse(e.newValue);
-          const synced = Array.isArray(parsed) ? parsed : parsed.projects || [];
-          setProjects(synced);
-        } catch {}
-      }
-    };
-    window.addEventListener("storage", onStorage);
-
-    return () => {
-      window.removeEventListener("beforeunload", onBeforeUnload);
-      window.removeEventListener("storage", onStorage);
-    };
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
   }, [projects]);
 
   const resetForm = () => {
@@ -263,7 +260,7 @@ export default function App() {
   };
 
   const addAltToExisting = async (projId, upgradeId, file) => {
-    const src = await fileToDataUrl(file);
+    const src = await readAndCompress(file);
     setProjects((ps) => ps.map((p) => {
       if (p.id !== projId) return p;
       return {
