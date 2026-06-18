@@ -176,6 +176,7 @@ export default function App() {
 
   const [addingToProject, setAddingToProject] = useState(null);
   const [extraUpgrade, setExtraUpgrade] = useState(null);
+  const [editingProjectId, setEditingProjectId] = useState(null);
 
   const [theme, setTheme] = useState(() => {
     try { return localStorage.getItem(THEME_KEY) || "dark"; } catch { return "dark"; }
@@ -289,6 +290,38 @@ export default function App() {
     await doSave(newProjects);
   };
 
+  const startEditProject = (proj) => {
+    setEditingProjectId(proj.id);
+    setSubject(proj.subject);
+    setRequirement(proj.requirement || "");
+    setContact(proj.contact || "");
+    setUpgrades(proj.upgrades.map((u) => ({ ...u })));
+    setView("edit");
+  };
+
+  const handleEditSave = async () => {
+    const validUpgrades = upgrades.filter((u) => u.beforeSrc && u.alternatives.length > 0).map((u, i) => ({
+      ...u,
+      title: u.title.trim() || "שידרוג " + (i + 1),
+    }));
+    if (!validUpgrades.length) return;
+    const newProjects = projects.map((p) => {
+      if (p.id !== editingProjectId) return p;
+      return { ...p, subject: subject.trim(), requirement: requirement.trim(), contact: contact.trim(), upgrades: validUpgrades };
+    });
+    setProjects(newProjects);
+    await doSave(newProjects);
+    setEditingProjectId(null);
+    resetForm();
+    setView("library");
+  };
+
+  const cancelEdit = () => {
+    setEditingProjectId(null);
+    resetForm();
+    setView("library");
+  };
+
   if (isLoading) {
     return (
       <div className="app">
@@ -369,6 +402,43 @@ export default function App() {
               </div>
 
               <button className="btn-primary" disabled={!canSubmit} onClick={handleSubmit}>שמירה בספריה</button>
+            </div>
+          )}
+
+          {view === "edit" && (
+            <div className="form-section glass-card">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                <h2>עריכת פרויקט</h2>
+                <button className="btn-secondary" onClick={cancelEdit}>ביטול</button>
+              </div>
+              <div className="field-row">
+                <div className="field-group" style={{ marginBottom: 0 }}>
+                  <label>נושא</label>
+                  <input type="text" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="למשל: חידוש חזית בניין" />
+                </div>
+                <div className="field-group" style={{ marginBottom: 0 }}>
+                  <label>איש קשר</label>
+                  <input type="text" value={contact} onChange={(e) => setContact(e.target.value)} placeholder="שם, טלפון או מייל" />
+                </div>
+              </div>
+              <div className="field-group">
+                <label>דרישה / תיאור</label>
+                <textarea value={requirement} onChange={(e) => setRequirement(e.target.value)} placeholder="למשל: שיפוץ טיח, החלפת חלונות" />
+              </div>
+
+              {upgrades.map((u, i) => (
+                <UpgradeFormBlock
+                  key={u.id} upgrade={u} index={i} total={upgrades.length}
+                  onChange={(updated) => setUpgrades((us) => us.map((uu) => uu.id === u.id ? updated : uu))}
+                  onRemove={() => setUpgrades((us) => us.filter((uu) => uu.id !== u.id))}
+                />
+              ))}
+
+              <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
+                <button className="btn-secondary" onClick={addUpgradeSlot}>+ שידרוג נוסף</button>
+              </div>
+
+              <button className="btn-primary" disabled={!canSubmit} onClick={handleEditSave}>שמירת שינויים</button>
             </div>
           )}
 
@@ -473,7 +543,8 @@ export default function App() {
                     {selectedProject.requirement && <p>{selectedProject.requirement}</p>}
                     {selectedProject.contact && <div className="compare-contact">איש קשר: {selectedProject.contact}</div>}
 
-                    <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+                    <div style={{ display: "flex", gap: 8, marginTop: 14, flexWrap: "wrap" }}>
+                      <button className="btn-primary" style={{ fontSize: 13, padding: "8px 18px" }} onClick={() => startEditProject(selectedProject)}>עריכת פרויקט</button>
                       <button className="btn-secondary" onClick={() => startAddUpgrade(selectedProject.id)}>+ שידרוג נוסף</button>
                       <button className="delete-btn" onClick={() => deleteProject(selectedProject.id)}>מחיקת פרויקט</button>
                     </div>
