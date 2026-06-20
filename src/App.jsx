@@ -43,26 +43,42 @@ function ImageCompareSlider({ beforeSrc, afterSrc }) {
   const dragging = useRef(false);
 
   const updatePosition = useCallback((clientX) => {
+    if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
     const pct = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
     setPosition(pct);
   }, []);
 
+  const onDown = useCallback((e) => {
+    e.preventDefault();
+    dragging.current = true;
+    containerRef.current.setPointerCapture(e.pointerId);
+    updatePosition(e.clientX);
+  }, [updatePosition]);
+
+  const onMove = useCallback((e) => {
+    if (dragging.current) { e.preventDefault(); updatePosition(e.clientX); }
+  }, [updatePosition]);
+
+  const onUp = useCallback(() => { dragging.current = false; }, []);
+
   return (
     <div
       className="compare-container"
       ref={containerRef}
-      onPointerDown={(e) => { dragging.current = true; containerRef.current.setPointerCapture(e.pointerId); updatePosition(e.clientX); }}
-      onPointerMove={(e) => { if (dragging.current) updatePosition(e.clientX); }}
-      onPointerUp={() => { dragging.current = false; }}
+      style={{ touchAction: "none" }}
+      onPointerDown={onDown}
+      onPointerMove={onMove}
+      onPointerUp={onUp}
+      onPointerCancel={onUp}
     >
-      <img src={beforeSrc} alt="before" />
+      <img src={beforeSrc} alt="before" draggable={false} />
       <div className="compare-after-wrap" style={{ clipPath: `inset(0 0 0 ${position}%)` }}>
-        <img src={afterSrc} alt="after" />
+        <img src={afterSrc} alt="after" draggable={false} />
       </div>
       <div className="compare-handle" style={{ left: `${position}%` }}>
         <div className="compare-handle-circle">
-          <div className="handle-arrows"><span>&#9664;</span><span>&#9654;</span></div>
+          <div className="handle-arrows"><span>◀</span><span>▶</span></div>
         </div>
       </div>
       <div className="compare-labels">
