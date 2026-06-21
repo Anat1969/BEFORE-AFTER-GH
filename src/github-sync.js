@@ -19,8 +19,6 @@ export function hasToken() {
 export async function pullFromGitHub() {
   const url = `https://api.github.com/repos/${OWNER}/${REPO}/contents/${FILE_PATH}?ref=${BRANCH}&t=${Date.now()}`;
   const headers = { Accept: "application/vnd.github.v3+json" };
-  const token = getToken();
-  if (token) headers.Authorization = `Bearer ${token}`;
 
   const res = await fetch(url, { headers });
   if (!res.ok) throw new Error("GitHub read failed: " + res.status);
