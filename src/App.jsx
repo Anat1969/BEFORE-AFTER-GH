@@ -216,21 +216,27 @@ export default function App() {
         if (d && d.length > 0) localData = d;
       } catch {}
 
-      if (hasToken()) {
-        try {
-          const { data: remoteData } = await pullFromGitHub();
-          if (remoteData && remoteData.length > 0) {
-            const merged = mergeProjects(localData, remoteData);
-            setProjects(merged);
-            await dbSave(merged);
-            loaded.current = true;
-            setIsLoading(false);
-            return;
+      try {
+        const { data: remoteData } = await pullFromGitHub();
+        if (remoteData && remoteData.length > 0) {
+          const merged = mergeProjects(localData, remoteData);
+          setProjects(merged);
+          await dbSave(merged);
+          if (hasToken() && localData.length > 0 && localData.length > remoteData.length) {
+            try { await pushToGitHub(merged); } catch {}
           }
-        } catch {}
-      }
+          loaded.current = true;
+          setIsLoading(false);
+          return;
+        }
+      } catch {}
 
-      if (localData.length > 0) setProjects(localData);
+      if (localData.length > 0) {
+        setProjects(localData);
+        if (hasToken()) {
+          try { await pushToGitHub(localData); } catch {}
+        }
+      }
       loaded.current = true;
       setIsLoading(false);
     })();
