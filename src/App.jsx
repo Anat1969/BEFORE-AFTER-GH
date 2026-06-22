@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { loadProjects as dbLoad, saveProjects as dbSave } from "./db.js";
-import { pullFromGitHub, pushToGitHub, mergeProjects, hasToken, getToken, setToken } from "./github-sync.js";
+import { cloudPull, cloudPush, mergeProjects } from "./cloud.js";
 
 const THEME_KEY = "before-after-theme";
 
@@ -196,8 +196,6 @@ export default function App() {
   const [editingProjectId, setEditingProjectId] = useState(null);
 
   const [syncStatus, setSyncStatus] = useState(null);
-  const [showSettings, setShowSettings] = useState(false);
-  const [tokenInput, setTokenInput] = useState(() => getToken());
 
   const [theme, setTheme] = useState(() => {
     try { return localStorage.getItem(THEME_KEY) || "dark"; } catch { return "dark"; }
@@ -217,13 +215,13 @@ export default function App() {
       } catch {}
 
       try {
-        const { data: remoteData } = await pullFromGitHub();
+        const remoteData = await cloudPull();
         if (remoteData && remoteData.length > 0) {
           const merged = mergeProjects(localData, remoteData);
           setProjects(merged);
           await dbSave(merged);
-          if (hasToken() && localData.length > 0 && localData.length > remoteData.length) {
-            try { await pushToGitHub(merged); } catch {}
+          if (localData.length > 0 && localData.length > remoteData.length) {
+            try { await cloudPush(merged); } catch {}
           }
           loaded.current = true;
           setIsLoading(false);
@@ -233,9 +231,7 @@ export default function App() {
 
       if (localData.length > 0) {
         setProjects(localData);
-        if (hasToken()) {
-          try { await pushToGitHub(localData); } catch {}
-        }
+        try { await cloudPush(localData); } catch {}
       }
       loaded.current = true;
       setIsLoading(false);
@@ -245,23 +241,20 @@ export default function App() {
   const doSave = useCallback(async (data) => {
     setSaveStatus("saving");
     const ok = await dbSave(data);
-    if (hasToken()) {
-      try { await pushToGitHub(data); } catch (e) { console.warn("GitHub push failed:", e); }
-    }
+    try { await cloudPush(data); } catch (e) { console.warn("Cloud push failed:", e); }
     setSaveStatus(ok ? "saved" : "error");
     setTimeout(() => setSaveStatus(null), 2000);
     return ok;
   }, []);
 
   const syncNow = useCallback(async () => {
-    if (!hasToken()) { setShowSettings(true); return; }
     setSyncStatus("syncing");
     try {
-      const { data: remoteData } = await pullFromGitHub();
+      const remoteData = await cloudPull();
       const merged = mergeProjects(projects, remoteData || []);
       setProjects(merged);
       await dbSave(merged);
-      await pushToGitHub(merged);
+      await cloudPush(merged);
       setSyncStatus("synced");
     } catch (e) {
       console.error("Sync failed:", e);
@@ -423,7 +416,6 @@ export default function App() {
             <button className="sync-btn" onClick={syncNow} title="סנכרון ענן">
               {syncStatus === "syncing" ? "⟳" : syncStatus === "synced" ? "✓" : syncStatus === "error" ? "✗" : "☁"}
             </button>
-            <button className="theme-toggle" onClick={() => setShowSettings((s) => !s)} title="הגדרות">⚙</button>
             <button
               className="theme-toggle"
               onClick={() => setTheme((t) => t === "dark" ? "light" : "dark")}
@@ -435,43 +427,6 @@ export default function App() {
             <button className={"nav-btn" + (view === "add" ? " active" : "")} onClick={() => { setView("add"); setAddingToProject(null); }}>פרויקט חדש</button>
           </div>
         </div>
-
-        {showSettings && (
-          <div className="settings-panel glass-card">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-              <h3>הגדרות סנכרון</h3>
-              <button className="theme-toggle" onClick={() => setShowSettings(false)}>&times;</button>
-            </div>
-            <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 10, lineHeight: 1.6 }}>
-              כדי לסנכרן נתונים בין מכשירים, צרי GitHub Personal Access Token:
-              <br />1. היכנסי ל-github.com/settings/tokens
-              <br />2. צרי token חדש (fine-grained) עם הרשאת Contents: Read and Write
-              <br />3. הדביקי אותו כאן
-            </p>
-            <div className="field-group">
-              <label>GitHub Token</label>
-              <input
-                type="password"
-                value={tokenInput}
-                onChange={(e) => setTokenInput(e.target.value)}
-                placeholder="ghp_xxxxxxxxxxxx או github_pat_xxxx"
-                dir="ltr"
-              />
-            </div>
-            <div style={{ display: "flex", gap: 8 }}>
-              <button className="btn-primary" style={{ fontSize: 13, padding: "8px 20px" }} onClick={() => {
-                setToken(tokenInput);
-                setShowSettings(false);
-                syncNow();
-              }}>שמירה וסנכרון</button>
-              {hasToken() && <button className="btn-secondary" style={{ fontSize: 13 }} onClick={() => {
-                setTokenInput("");
-                setToken("");
-                setShowSettings(false);
-              }}>ניתוק</button>}
-            </div>
-          </div>
-        )}
 
         <div className="container">
           {view === "add" && (
