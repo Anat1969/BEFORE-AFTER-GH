@@ -1,8 +1,10 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { loadProjects as dbLoad, saveProjects as dbSave } from "./db.js";
-import { cloudPull, cloudPush, mergeProjects } from "./cloud.js";
+import { cloudPull, cloudPush, cloudPullLegacy, mergeProjects } from "./cloud.js";
+import { uploadProjectImages } from "./storage.js";
 
 const THEME_KEY = "before-after-theme";
+const EMAIL_KEY = "before-after-email";
 
 function fileToDataUrl(file) {
   return new Promise((resolve) => {
@@ -173,13 +175,76 @@ function UpgradeFormBlock({ upgrade, index, onChange, onRemove, total }) {
   );
 }
 
+function LoginScreen({ onLogin, theme, setTheme }) {
+  const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const trimmed = email.trim().toLowerCase();
+    if (!trimmed || !trimmed.includes("@")) return;
+    setLoading(true);
+    onLogin(trimmed);
+  };
+
+  return (
+    <div className="app">
+      <div className="bg-orbs">
+        <div className="orb orb-1" />
+        <div className="orb orb-2" />
+        <div className="orb orb-3" />
+      </div>
+      <div className="login-screen">
+        <div className="login-card glass-card">
+          <div className="login-logo">
+            <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+              <rect x="4" y="12" width="24" height="40" rx="4" stroke="var(--cyan)" strokeWidth="2" fill="rgba(77,232,224,0.08)"/>
+              <rect x="36" y="12" width="24" height="40" rx="4" stroke="var(--blue)" strokeWidth="2" fill="rgba(75,123,245,0.08)"/>
+              <line x1="32" y1="8" x2="32" y2="56" stroke="var(--cyan)" strokeWidth="2" strokeDasharray="4 4"/>
+            </svg>
+          </div>
+          <h1>שידרוגים</h1>
+          <p className="login-subtitle">הזינו מייל כדי לסנכרן בין מכשירים</p>
+          <form onSubmit={handleSubmit}>
+            <div className="field-group">
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="your@email.com"
+                dir="ltr"
+                autoFocus
+                required
+              />
+            </div>
+            <button className="btn-primary login-btn" type="submit" disabled={loading || !email.trim().includes("@")}>
+              {loading ? "מתחבר..." : "כניסה"}
+            </button>
+          </form>
+          <button
+            className="theme-toggle login-theme-toggle"
+            onClick={() => setTheme((t) => t === "dark" ? "light" : "dark")}
+            title={theme === "dark" ? "מצב בהיר" : "מצב כהה"}
+          >
+            {theme === "dark" ? "☀️" : "🌙"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [view, setView] = useState("library");
   const [projects, setProjects] = useState([]);
   const [selectedProjectId, setSelectedProjectId] = useState(null);
   const loaded = useRef(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [saveStatus, setSaveStatus] = useState(null); // null | "saving" | "saved" | "error"
+  const [saveStatus, setSaveStatus] = useState(null);
+
+  const [userEmail, setUserEmail] = useState(() => {
+    try { return localStorage.getItem(EMAIL_KEY) || null; } catch { return null; }
+  });
 
   const [subject, setSubject] = useState("");
   const [requirement, setRequirement] = useState("");
@@ -207,6 +272,10 @@ export default function App() {
   }, [theme]);
 
   useEffect(() => {
+    if (!userEmail) {
+      setIsLoading(false);
+      return;
+    }
     (async () => {
       let localData = [];
       try {
@@ -215,13 +284,13 @@ export default function App() {
       } catch {}
 
       try {
-        const remoteData = await cloudPull();
+        const remoteData = await cloudPull(userEmail);
         if (remoteData && remoteData.length > 0) {
           const merged = mergeProjects(localData, remoteData);
           setProjects(merged);
           await dbSave(merged);
           if (localData.length > 0 && localData.length > remoteData.length) {
-            try { await cloudPush(merged); } catch {}
+            try { await cloudPush(merged, userEmail); } catch {}
           }
           loaded.current = true;
           setIsLoading(false);
@@ -229,39 +298,79 @@ export default function App() {
         }
       } catch {}
 
+      if (localData.length === 0) {
+        try {
+          const legacy = await cloudPullLegacy();
+          if (legacy && legacy.length > 0) {
+            localData = legacy;
+          }
+        } catch {}
+      }
+
       if (localData.length > 0) {
         setProjects(localData);
-        try { await cloudPush(localData); } catch {}
+        await dbSave(localData);
+        try { await cloudPush(localData, userEmail); } catch {}
       }
       loaded.current = true;
       setIsLoading(false);
     })();
-  }, []);
+  }, [userEmail]);
+
+  const handleLogin = (email) => {
+    try { localStorage.setItem(EMAIL_KEY, email); } catch {}
+    setUserEmail(email);
+    setIsLoading(true);
+    loaded.current = false;
+  };
+
+  const handleLogout = () => {
+    try { localStorage.removeItem(EMAIL_KEY); } catch {}
+    setUserEmail(null);
+    setProjects([]);
+    loaded.current = false;
+    setView("library");
+    setSelectedProjectId(null);
+  };
 
   const doSave = useCallback(async (data) => {
+    if (!userEmail) return false;
     setSaveStatus("saving");
-    const ok = await dbSave(data);
-    try { await cloudPush(data); } catch (e) { console.warn("Cloud push failed:", e); }
+
+    let uploadedData = data;
+    try {
+      const uploaded = [];
+      for (const p of data) {
+        uploaded.push(await uploadProjectImages(p, userEmail));
+      }
+      uploadedData = uploaded;
+    } catch (e) {
+      console.warn("Image upload failed, saving with local data:", e);
+    }
+
+    const ok = await dbSave(uploadedData);
+    try { await cloudPush(uploadedData, userEmail); } catch (e) { console.warn("Cloud push failed:", e); }
     setSaveStatus(ok ? "saved" : "error");
     setTimeout(() => setSaveStatus(null), 2000);
     return ok;
-  }, []);
+  }, [userEmail]);
 
   const syncNow = useCallback(async () => {
+    if (!userEmail) return;
     setSyncStatus("syncing");
     try {
-      const remoteData = await cloudPull();
+      const remoteData = await cloudPull(userEmail);
       const merged = mergeProjects(projects, remoteData || []);
       setProjects(merged);
       await dbSave(merged);
-      await cloudPush(merged);
+      await cloudPush(merged, userEmail);
       setSyncStatus("synced");
     } catch (e) {
       console.error("Sync failed:", e);
       setSyncStatus("error");
     }
     setTimeout(() => setSyncStatus(null), 2000);
-  }, [projects]);
+  }, [projects, userEmail]);
 
   useEffect(() => {
     if (!loaded.current) return;
@@ -377,6 +486,10 @@ export default function App() {
     setView("library");
   };
 
+  if (!userEmail) {
+    return <LoginScreen onLogin={handleLogin} theme={theme} setTheme={setTheme} />;
+  }
+
   if (isLoading) {
     return (
       <div className="app">
@@ -413,9 +526,11 @@ export default function App() {
         <div className="header">
           <h1>שידרוגים</h1>
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+            <span className="user-email-badge" title={userEmail}>{userEmail}</span>
             <button className="sync-btn" onClick={syncNow} title="סנכרון ענן">
               {syncStatus === "syncing" ? "⟳" : syncStatus === "synced" ? "✓" : syncStatus === "error" ? "✗" : "☁"}
             </button>
+            <button className="logout-btn" onClick={handleLogout} title="יציאה">✕</button>
             <button
               className="theme-toggle"
               onClick={() => setTheme((t) => t === "dark" ? "light" : "dark")}

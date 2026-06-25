@@ -1,7 +1,6 @@
 const SUPABASE_URL = "https://slcpldoaaagkoozpbjsk.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsY3BsZG9hYWFna29venBianNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3OTM0MjEsImV4cCI6MjA5NDM2OTQyMX0.g0iLhliFQNlD3Ey_mrvwMolppj-nV24Pj9klrFtsLWo";
 const TABLE = "before_after_projects";
-const ROW_ID = "all";
 
 const headers = {
   apikey: SUPABASE_KEY,
@@ -10,9 +9,10 @@ const headers = {
   Prefer: "return=representation",
 };
 
-export async function cloudPull() {
+export async function cloudPull(email) {
+  const id = email.toLowerCase().trim();
   const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/${TABLE}?id=eq.${ROW_ID}&select=data`,
+    `${SUPABASE_URL}/rest/v1/${TABLE}?id=eq.${encodeURIComponent(id)}&select=data`,
     { headers }
   );
   if (!res.ok) return [];
@@ -21,22 +21,40 @@ export async function cloudPull() {
   return rows[0].data || [];
 }
 
-export async function cloudPush(projects) {
-  const body = { id: ROW_ID, data: projects, updated_at: new Date().toISOString() };
+export async function cloudPush(projects, email) {
+  const id = email.toLowerCase().trim();
+  const body = { id, data: projects, updated_at: new Date().toISOString() };
 
-  const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/${TABLE}?id=eq.${ROW_ID}`,
-    { method: "PATCH", headers, body: JSON.stringify(body) }
+  const check = await fetch(
+    `${SUPABASE_URL}/rest/v1/${TABLE}?id=eq.${encodeURIComponent(id)}&select=id`,
+    { headers }
   );
+  const existing = await check.json();
 
-  if (res.status === 404 || (await res.json()).length === 0) {
-    const ins = await fetch(
+  if (existing.length > 0) {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/${TABLE}?id=eq.${encodeURIComponent(id)}`,
+      { method: "PATCH", headers, body: JSON.stringify({ data: projects, updated_at: new Date().toISOString() }) }
+    );
+    return res.ok;
+  } else {
+    const res = await fetch(
       `${SUPABASE_URL}/rest/v1/${TABLE}`,
       { method: "POST", headers, body: JSON.stringify(body) }
     );
-    return ins.ok;
+    return res.ok;
   }
-  return res.ok;
+}
+
+export async function cloudPullLegacy() {
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/${TABLE}?id=eq.all&select=data`,
+    { headers }
+  );
+  if (!res.ok) return [];
+  const rows = await res.json();
+  if (rows.length === 0) return [];
+  return rows[0].data || [];
 }
 
 export function mergeProjects(local, remote) {
