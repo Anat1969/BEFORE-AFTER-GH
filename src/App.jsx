@@ -416,6 +416,7 @@ export default function App() {
         <div className="header">
           <h1>שידרוגים</h1>
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+            <a className="edit-app-btn" href="https://claude.ai/code/session_017GgJHAnNcmyZB1a8sSHCF3" target="_blank" rel="noopener noreferrer" title="עריכה ושדרוג האפליקציה">✎</a>
             <button className="sync-btn" onClick={syncNow} title="סנכרון ענן">
               {syncStatus === "syncing" ? "⟳" : syncStatus === "synced" ? "✓" : syncStatus === "error" ? "✗" : "☁"}
             </button>
