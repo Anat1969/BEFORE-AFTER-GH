@@ -572,6 +572,7 @@ export default function App() {
                     altLabel: alt.label || "חלופה " + (aIdx + 1),
                     altId: alt.id,
                     altIdx: aIdx,
+                    afterSrc: alt.afterSrc || null,
                     date: proj.date,
                   });
                 });
@@ -586,6 +587,7 @@ export default function App() {
                     altLabel: "—",
                     altId: null,
                     altIdx: -1,
+                    afterSrc: null,
                     date: proj.date,
                   });
                 }
@@ -597,6 +599,7 @@ export default function App() {
                   contact: proj.contact || "",
                   upgradeTitle: "—",
                   upgradeId: null,
+                  afterSrc: null,
                   upgradeIdx: -1,
                   altLabel: "—",
                   altId: null,
@@ -705,6 +708,31 @@ export default function App() {
               await doSave(newProjects);
             };
 
+            const deleteRow = async (row) => {
+              let newProjects;
+              if (!row.upgradeId) {
+                newProjects = projects.filter((p) => p.id !== row.projectId);
+              } else if (row.altId) {
+                newProjects = projects.map((p) => {
+                  if (p.id !== row.projectId) return p;
+                  return {
+                    ...p,
+                    upgrades: p.upgrades.map((u) => {
+                      if (u.id !== row.upgradeId) return u;
+                      return { ...u, alternatives: u.alternatives.filter((a) => a.id !== row.altId) };
+                    }),
+                  };
+                });
+              } else {
+                newProjects = projects.map((p) => {
+                  if (p.id !== row.projectId) return p;
+                  return { ...p, upgrades: p.upgrades.filter((u) => u.id !== row.upgradeId) };
+                });
+              }
+              setProjects(newProjects);
+              await doSave(newProjects);
+            };
+
             const applyMoves = async () => {
               let newProjects = [...projects.map((p) => ({ ...p, upgrades: [...p.upgrades] }))];
               for (const move of pendingMoves) {
@@ -781,6 +809,7 @@ export default function App() {
                     <table className="contacts-table">
                       <thead>
                         <tr>
+                          <th className="th-img">תמונה</th>
                           <th onClick={() => toggleSort("subject")}>
                             <span>שם פרויקט</span>
                             <span className="sort-icon">{sortIcon("subject")}</span>
@@ -797,6 +826,7 @@ export default function App() {
                             <span>חלופה</span>
                             <span className="sort-icon">{sortIcon("altLabel")}</span>
                           </th>
+                          {tableEditMode && <th className="th-actions">פעולות</th>}
                         </tr>
                       </thead>
                       <tbody>
@@ -805,7 +835,7 @@ export default function App() {
                           return (
                             <React.Fragment key={projId}>
                               <tr className="group-header-row" onClick={() => toggleGroup(projId)}>
-                                <td colSpan={4}>
+                                <td colSpan={tableEditMode ? 6 : 5}>
                                   <span className={"group-toggle" + (collapsed ? " collapsed" : "")}>▾</span>
                                   <span className="group-title">{groupRows[0].subject}</span>
                                   <span className="group-count">{groupRows.length + " רשומות"}</span>
@@ -817,6 +847,13 @@ export default function App() {
                                 const destProj = isPendingMove ? projects.find((p) => p.id === moveDest) : null;
                                 return (
                                 <tr key={projId + "-" + ri} className={"data-row" + (isPendingMove ? " pending-move" : "")}>
+                                  <td className="td-img">
+                                    {row.afterSrc ? (
+                                      <img className="table-thumb" src={row.afterSrc} alt="אחרי" onClick={() => !tableEditMode && goToProject(row.projectId, row.upgradeIdx, row.altIdx)} />
+                                    ) : (
+                                      <span className="table-thumb-empty">—</span>
+                                    )}
+                                  </td>
                                   <td>
                                     {tableEditMode && row.upgradeId ? (
                                       <select
@@ -879,6 +916,11 @@ export default function App() {
                                       <span>—</span>
                                     )}
                                   </td>
+                                  {tableEditMode && (
+                                    <td className="td-actions">
+                                      <button className="table-delete-btn" onClick={() => deleteRow(row)} title="מחיקה">✕</button>
+                                    </td>
+                                  )}
                                 </tr>
                                 );
                               })}

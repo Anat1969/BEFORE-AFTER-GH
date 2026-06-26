@@ -1536,6 +1536,78 @@ body {
   border-bottom-color: rgba(251,191,36,0.12);
 }
 
+.th-img, .td-img { width: 56px; text-align: center; }
+.th-actions, .td-actions { width: 50px; text-align: center; }
+
+.th-img { cursor: default !important; }
+.th-actions { cursor: default !important; }
+
+.table-thumb {
+  width: 44px; height: 44px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.08);
+  cursor: pointer;
+  transition: all 0.3s var(--ease-out);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  display: block;
+}
+
+.table-thumb:hover {
+  transform: scale(1.15);
+  border-color: var(--cyan-dim);
+  box-shadow: 0 0 16px var(--cyan-glow), 0 4px 12px rgba(0,0,0,0.4);
+}
+
+.table-thumb-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px; height: 44px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.03);
+  border: 1px dashed rgba(255,255,255,0.08);
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.table-delete-btn {
+  background: rgba(240,85,85,0.08);
+  border: 1px solid rgba(240,85,85,0.15);
+  color: var(--danger);
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s var(--ease-spring);
+  line-height: 1;
+}
+
+.table-delete-btn:hover {
+  background: rgba(240,85,85,0.2);
+  border-color: var(--danger);
+  transform: scale(1.15);
+  box-shadow: 0 0 14px rgba(240,85,85,0.2);
+}
+
+[data-theme="light"] .table-thumb {
+  border-color: rgba(0,0,0,0.08);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+[data-theme="light"] .table-thumb-empty {
+  background: rgba(0,0,0,0.03);
+  border-color: rgba(0,0,0,0.1);
+}
+
+[data-theme="light"] .table-delete-btn {
+  background: rgba(224,64,64,0.06);
+  border-color: rgba(224,64,64,0.12);
+}
+
 .move-arrow {
   display: block;
   font-size: 10px;
