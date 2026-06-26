@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import { loadProjects as dbLoad, saveProjects as dbSave } from "./db.js";
 import { cloudPull, cloudPush, mergeProjects } from "./cloud.js";
 
@@ -196,6 +196,9 @@ export default function App() {
   const [editingProjectId, setEditingProjectId] = useState(null);
 
   const [syncStatus, setSyncStatus] = useState(null);
+  const [tableSortKey, setTableSortKey] = useState("subject");
+  const [tableSortDir, setTableSortDir] = useState("asc");
+  const [tableCollapsed, setTableCollapsed] = useState({});
 
   const [theme, setTheme] = useState(() => {
     try { return localStorage.getItem(THEME_KEY) || "dark"; } catch { return "dark"; }
@@ -424,6 +427,7 @@ export default function App() {
               {theme === "dark" ? "☀️" : "🌙"}
             </button>
             <button className={"nav-btn" + (view === "library" ? " active" : "")} onClick={() => { setView("library"); setSelectedProjectId(null); setAddingToProject(null); }}>ספריה</button>
+            <button className={"nav-btn" + (view === "contacts" ? " active" : "")} onClick={() => { setView("contacts"); setSelectedProjectId(null); setAddingToProject(null); }}>טבלת אנשי קשר</button>
             <button className={"nav-btn" + (view === "add" ? " active" : "")} onClick={() => { setView("add"); setAddingToProject(null); }}>פרויקט חדש</button>
           </div>
         </div>
@@ -548,6 +552,171 @@ export default function App() {
               )}
             </>
           )}
+
+          {view === "contacts" && (() => {
+            const rows = [];
+            projects.forEach((proj) => {
+              proj.upgrades.forEach((upg, uIdx) => {
+                upg.alternatives.forEach((alt, aIdx) => {
+                  rows.push({
+                    projectId: proj.id,
+                    subject: proj.subject,
+                    contact: proj.contact || "",
+                    upgradeTitle: upg.title || "שידרוג " + (uIdx + 1),
+                    upgradeIdx: uIdx,
+                    altLabel: alt.label || "חלופה " + (aIdx + 1),
+                    altIdx: aIdx,
+                    date: proj.date,
+                  });
+                });
+                if (upg.alternatives.length === 0) {
+                  rows.push({
+                    projectId: proj.id,
+                    subject: proj.subject,
+                    contact: proj.contact || "",
+                    upgradeTitle: upg.title || "שידרוג " + (uIdx + 1),
+                    upgradeIdx: uIdx,
+                    altLabel: "—",
+                    altIdx: -1,
+                    date: proj.date,
+                  });
+                }
+              });
+              if (proj.upgrades.length === 0) {
+                rows.push({
+                  projectId: proj.id,
+                  subject: proj.subject,
+                  contact: proj.contact || "",
+                  upgradeTitle: "—",
+                  upgradeIdx: -1,
+                  altLabel: "—",
+                  altIdx: -1,
+                  date: proj.date,
+                });
+              }
+            });
+
+            const sorted = [...rows].sort((a, b) => {
+              const va = a[tableSortKey] || "";
+              const vb = b[tableSortKey] || "";
+              const cmp = String(va).localeCompare(String(vb), "he");
+              return tableSortDir === "asc" ? cmp : -cmp;
+            });
+
+            const grouped = {};
+            sorted.forEach((row) => {
+              if (!grouped[row.projectId]) grouped[row.projectId] = [];
+              grouped[row.projectId].push(row);
+            });
+
+            const toggleSort = (key) => {
+              if (tableSortKey === key) {
+                setTableSortDir((d) => (d === "asc" ? "desc" : "asc"));
+              } else {
+                setTableSortKey(key);
+                setTableSortDir("asc");
+              }
+            };
+
+            const toggleGroup = (projId) => {
+              setTableCollapsed((c) => ({ ...c, [projId]: !c[projId] }));
+            };
+
+            const goToProject = (projId, upgradeIdx, altIdx) => {
+              setSelectedProjectId(projId);
+              setActiveUpgradeIdx(upgradeIdx >= 0 ? upgradeIdx : 0);
+              setActiveAltIdx(altIdx >= 0 ? altIdx : 0);
+              setView("compare");
+            };
+
+            const sortIcon = (key) => {
+              if (tableSortKey !== key) return "⇅";
+              return tableSortDir === "asc" ? "▲" : "▼";
+            };
+
+            return (
+              <div className="contacts-table-wrapper glass-card">
+                <h2>טבלת אנשי קשר ופרויקטים</h2>
+                {rows.length === 0 ? (
+                  <div className="empty-state" style={{ padding: "40px 20px" }}>
+                    <p>אין פרויקטים להצגה</p>
+                    <button className="nav-btn" onClick={() => setView("add")} style={{ marginTop: 12 }}>פרויקט ראשון</button>
+                  </div>
+                ) : (
+                  <div className="contacts-table-scroll">
+                    <table className="contacts-table">
+                      <thead>
+                        <tr>
+                          <th onClick={() => toggleSort("subject")}>
+                            <span>שם פרויקט</span>
+                            <span className="sort-icon">{sortIcon("subject")}</span>
+                          </th>
+                          <th onClick={() => toggleSort("contact")}>
+                            <span>איש קשר</span>
+                            <span className="sort-icon">{sortIcon("contact")}</span>
+                          </th>
+                          <th onClick={() => toggleSort("upgradeTitle")}>
+                            <span>שידרוג</span>
+                            <span className="sort-icon">{sortIcon("upgradeTitle")}</span>
+                          </th>
+                          <th onClick={() => toggleSort("altLabel")}>
+                            <span>חלופה</span>
+                            <span className="sort-icon">{sortIcon("altLabel")}</span>
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {Object.entries(grouped).map(([projId, groupRows]) => {
+                          const collapsed = tableCollapsed[projId];
+                          return (
+                            <React.Fragment key={projId}>
+                              <tr className="group-header-row" onClick={() => toggleGroup(projId)}>
+                                <td colSpan={4}>
+                                  <span className={"group-toggle" + (collapsed ? " collapsed" : "")}>▾</span>
+                                  <span className="group-title">{groupRows[0].subject}</span>
+                                  <span className="group-count">{groupRows.length + " רשומות"}</span>
+                                </td>
+                              </tr>
+                              {!collapsed && groupRows.map((row, ri) => (
+                                <tr key={projId + "-" + ri} className="data-row">
+                                  <td>
+                                    <button className="table-link" onClick={() => goToProject(row.projectId, 0, 0)}>
+                                      {row.subject}
+                                    </button>
+                                  </td>
+                                  <td>
+                                    <span className="table-contact">{row.contact || "—"}</span>
+                                  </td>
+                                  <td>
+                                    {row.upgradeIdx >= 0 ? (
+                                      <button className="table-link upgrade-link" onClick={() => goToProject(row.projectId, row.upgradeIdx, 0)}>
+                                        {row.upgradeTitle}
+                                      </button>
+                                    ) : (
+                                      <span>—</span>
+                                    )}
+                                  </td>
+                                  <td>
+                                    {row.altIdx >= 0 ? (
+                                      <button className="table-link alt-link" onClick={() => goToProject(row.projectId, row.upgradeIdx, row.altIdx)}>
+                                        {row.altLabel}
+                                      </button>
+                                    ) : (
+                                      <span>—</span>
+                                    )}
+                                  </td>
+                                </tr>
+                              ))}
+                            </React.Fragment>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {view === "compare" && selectedProject && (() => {
             const upg = selectedProject.upgrades[activeUpgradeIdx];
