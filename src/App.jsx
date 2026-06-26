@@ -200,6 +200,8 @@ export default function App() {
   const [tableSortDir, setTableSortDir] = useState("asc");
   const [tableCollapsed, setTableCollapsed] = useState({});
   const [tableSearch, setTableSearch] = useState("");
+  const [tableEditMode, setTableEditMode] = useState(false);
+  const [pendingMoves, setPendingMoves] = useState([]);
 
   const [theme, setTheme] = useState(() => {
     try { return localStorage.getItem(THEME_KEY) || "dark"; } catch { return "dark"; }
@@ -565,8 +567,10 @@ export default function App() {
                     subject: proj.subject,
                     contact: proj.contact || "",
                     upgradeTitle: upg.title || "שידרוג " + (uIdx + 1),
+                    upgradeId: upg.id,
                     upgradeIdx: uIdx,
                     altLabel: alt.label || "חלופה " + (aIdx + 1),
+                    altId: alt.id,
                     altIdx: aIdx,
                     date: proj.date,
                   });
@@ -577,8 +581,10 @@ export default function App() {
                     subject: proj.subject,
                     contact: proj.contact || "",
                     upgradeTitle: upg.title || "שידרוג " + (uIdx + 1),
+                    upgradeId: upg.id,
                     upgradeIdx: uIdx,
                     altLabel: "—",
+                    altId: null,
                     altIdx: -1,
                     date: proj.date,
                   });
@@ -590,8 +596,10 @@ export default function App() {
                   subject: proj.subject,
                   contact: proj.contact || "",
                   upgradeTitle: "—",
+                  upgradeId: null,
                   upgradeIdx: -1,
                   altLabel: "—",
+                  altId: null,
                   altIdx: -1,
                   date: proj.date,
                 });
@@ -646,24 +654,117 @@ export default function App() {
               return tableSortDir === "asc" ? "▲" : "▼";
             };
 
+            const moveUpgrade = (upgradeId, fromProjId, toProjId) => {
+              if (fromProjId === toProjId || !upgradeId) return;
+              setPendingMoves((prev) => {
+                const exists = prev.find((m) => m.upgradeId === upgradeId);
+                if (exists) {
+                  if (toProjId === exists.originalProjId) {
+                    return prev.filter((m) => m.upgradeId !== upgradeId);
+                  }
+                  return prev.map((m) => m.upgradeId === upgradeId ? { ...m, toProjId } : m);
+                }
+                return [...prev, { upgradeId, fromProjId: fromProjId, originalProjId: fromProjId, toProjId }];
+              });
+            };
+
+            const getMoveDest = (upgradeId) => {
+              const m = pendingMoves.find((m) => m.upgradeId === upgradeId);
+              return m ? m.toProjId : null;
+            };
+
+            const updateContactInline = async (projId, newContact) => {
+              const newProjects = projects.map((p) =>
+                p.id === projId ? { ...p, contact: newContact } : p
+              );
+              setProjects(newProjects);
+              await doSave(newProjects);
+            };
+
+            const updateUpgradeTitleInline = async (projId, upgradeId, newTitle) => {
+              const newProjects = projects.map((p) => {
+                if (p.id !== projId) return p;
+                return { ...p, upgrades: p.upgrades.map((u) => u.id === upgradeId ? { ...u, title: newTitle } : u) };
+              });
+              setProjects(newProjects);
+              await doSave(newProjects);
+            };
+
+            const updateAltLabelInline = async (projId, upgradeId, altId, newLabel) => {
+              const newProjects = projects.map((p) => {
+                if (p.id !== projId) return p;
+                return {
+                  ...p,
+                  upgrades: p.upgrades.map((u) => {
+                    if (u.id !== upgradeId) return u;
+                    return { ...u, alternatives: u.alternatives.map((a) => a.id === altId ? { ...a, label: newLabel } : a) };
+                  }),
+                };
+              });
+              setProjects(newProjects);
+              await doSave(newProjects);
+            };
+
+            const applyMoves = async () => {
+              let newProjects = [...projects.map((p) => ({ ...p, upgrades: [...p.upgrades] }))];
+              for (const move of pendingMoves) {
+                const fromProj = newProjects.find((p) => p.id === move.fromProjId);
+                const toProj = newProjects.find((p) => p.id === move.toProjId);
+                if (!fromProj || !toProj) continue;
+                const upgIdx = fromProj.upgrades.findIndex((u) => u.id === move.upgradeId);
+                if (upgIdx === -1) continue;
+                const [upgrade] = fromProj.upgrades.splice(upgIdx, 1);
+                toProj.upgrades.push(upgrade);
+              }
+              setProjects(newProjects);
+              await doSave(newProjects);
+              setPendingMoves([]);
+              setTableEditMode(false);
+            };
+
+            const cancelEditMode = () => {
+              setPendingMoves([]);
+              setTableEditMode(false);
+            };
+
             return (
               <div className="contacts-table-wrapper glass-card">
                 <div className="table-header-row">
                   <h2>טבלת אנשי קשר ופרויקטים</h2>
-                  <div className="table-search-box">
-                    <span className="search-icon">🔍</span>
-                    <input
-                      type="text"
-                      value={tableSearch}
-                      onChange={(e) => setTableSearch(e.target.value)}
-                      placeholder="חיפוש לפי מילת מפתח..."
-                      className="table-search-input"
-                    />
-                    {tableSearch && (
-                      <button className="search-clear" onClick={() => setTableSearch("")}>&times;</button>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                    <div className="table-search-box">
+                      <span className="search-icon">🔍</span>
+                      <input
+                        type="text"
+                        value={tableSearch}
+                        onChange={(e) => setTableSearch(e.target.value)}
+                        placeholder="חיפוש..."
+                        className="table-search-input"
+                      />
+                      {tableSearch && (
+                        <button className="search-clear" onClick={() => setTableSearch("")}>&times;</button>
+                      )}
+                    </div>
+                    {!tableEditMode ? (
+                      <button className="btn-secondary table-edit-toggle" onClick={() => setTableEditMode(true)}>✏ עריכה</button>
+                    ) : (
+                      <div style={{ display: "flex", gap: 6 }}>
+                        {pendingMoves.length > 0 && (
+                          <button className="btn-primary table-save-btn" onClick={applyMoves}>
+                            שמירת {pendingMoves.length} העברות
+                          </button>
+                        )}
+                        <button className="btn-secondary" onClick={cancelEditMode}>ביטול</button>
+                      </div>
                     )}
                   </div>
                 </div>
+                {tableEditMode && (
+                  <div className="edit-mode-banner">
+                    <span>מצב עריכה</span> — ניתן לערוך שדות, להעביר שידרוגים בין פרויקטים
+                    {pendingMoves.length > 0 && <span className="pending-badge">{pendingMoves.length} העברות ממתינות</span>}
+                  </div>
+                )}
                 {searchTerm && <div className="search-results-count">{filtered.length + " תוצאות מתוך " + rows.length}</div>}
                 {rows.length === 0 ? (
                   <div className="empty-state" style={{ padding: "40px 20px" }}>
@@ -696,6 +797,7 @@ export default function App() {
                             <span>חלופה</span>
                             <span className="sort-icon">{sortIcon("altLabel")}</span>
                           </th>
+                          {tableEditMode && <th style={{ width: 120 }}>העברה לפרויקט</th>}
                         </tr>
                       </thead>
                       <tbody>
@@ -704,24 +806,47 @@ export default function App() {
                           return (
                             <React.Fragment key={projId}>
                               <tr className="group-header-row" onClick={() => toggleGroup(projId)}>
-                                <td colSpan={4}>
+                                <td colSpan={tableEditMode ? 5 : 4}>
                                   <span className={"group-toggle" + (collapsed ? " collapsed" : "")}>▾</span>
                                   <span className="group-title">{groupRows[0].subject}</span>
                                   <span className="group-count">{groupRows.length + " רשומות"}</span>
                                 </td>
                               </tr>
-                              {!collapsed && groupRows.map((row, ri) => (
-                                <tr key={projId + "-" + ri} className="data-row">
+                              {!collapsed && groupRows.map((row, ri) => {
+                                const moveDest = getMoveDest(row.upgradeId);
+                                const isPendingMove = !!moveDest;
+                                return (
+                                <tr key={projId + "-" + ri} className={"data-row" + (isPendingMove ? " pending-move" : "")}>
                                   <td>
-                                    <button className="table-link" onClick={() => goToProject(row.projectId, 0, 0)}>
-                                      {row.subject}
-                                    </button>
+                                    {tableEditMode ? (
+                                      <span className="table-cell-view">{row.subject}</span>
+                                    ) : (
+                                      <button className="table-link" onClick={() => goToProject(row.projectId, 0, 0)}>
+                                        {row.subject}
+                                      </button>
+                                    )}
                                   </td>
                                   <td>
-                                    <span className="table-contact">{row.contact || "—"}</span>
+                                    {tableEditMode ? (
+                                      <input
+                                        className="table-inline-input"
+                                        defaultValue={row.contact}
+                                        onBlur={(e) => { if (e.target.value !== row.contact) updateContactInline(row.projectId, e.target.value); }}
+                                        placeholder="איש קשר"
+                                      />
+                                    ) : (
+                                      <span className="table-contact">{row.contact || "—"}</span>
+                                    )}
                                   </td>
                                   <td>
-                                    {row.upgradeIdx >= 0 ? (
+                                    {tableEditMode && row.upgradeId ? (
+                                      <input
+                                        className="table-inline-input"
+                                        defaultValue={row.upgradeTitle}
+                                        onBlur={(e) => { if (e.target.value !== row.upgradeTitle) updateUpgradeTitleInline(row.projectId, row.upgradeId, e.target.value); }}
+                                        placeholder="שם שידרוג"
+                                      />
+                                    ) : row.upgradeIdx >= 0 ? (
                                       <button className="table-link upgrade-link" onClick={() => goToProject(row.projectId, row.upgradeIdx, 0)}>
                                         {row.upgradeTitle}
                                       </button>
@@ -730,7 +855,14 @@ export default function App() {
                                     )}
                                   </td>
                                   <td>
-                                    {row.altIdx >= 0 ? (
+                                    {tableEditMode && row.altId ? (
+                                      <input
+                                        className="table-inline-input"
+                                        defaultValue={row.altLabel}
+                                        onBlur={(e) => { if (e.target.value !== row.altLabel) updateAltLabelInline(row.projectId, row.upgradeId, row.altId, e.target.value); }}
+                                        placeholder="שם חלופה"
+                                      />
+                                    ) : row.altIdx >= 0 ? (
                                       <button className="table-link alt-link" onClick={() => goToProject(row.projectId, row.upgradeIdx, row.altIdx)}>
                                         {row.altLabel}
                                       </button>
@@ -738,8 +870,26 @@ export default function App() {
                                       <span>—</span>
                                     )}
                                   </td>
+                                  {tableEditMode && (
+                                    <td>
+                                      {row.upgradeId && (
+                                        <select
+                                          className="table-move-select"
+                                          value={moveDest || row.projectId}
+                                          onChange={(e) => moveUpgrade(row.upgradeId, row.projectId, Number(e.target.value))}
+                                        >
+                                          {projects.map((p) => (
+                                            <option key={p.id} value={p.id}>
+                                              {p.id === row.projectId ? p.subject + " (נוכחי)" : p.subject}
+                                            </option>
+                                          ))}
+                                        </select>
+                                      )}
+                                    </td>
+                                  )}
                                 </tr>
-                              ))}
+                                );
+                              })}
                             </React.Fragment>
                           );
                         })}
