@@ -203,6 +203,7 @@ export default function App() {
   const [tableEditMode, setTableEditMode] = useState(false);
   const [pendingMoves, setPendingMoves] = useState([]);
   const [expandedProjectId, setExpandedProjectId] = useState(null);
+  const [expandedUpgradeId, setExpandedUpgradeId] = useState(null);
 
   const [theme, setTheme] = useState(() => {
     try { return localStorage.getItem(THEME_KEY) || "dark"; } catch { return "dark"; }
@@ -559,29 +560,74 @@ export default function App() {
                             {proj.upgrades.length <= 1 && (
                               <span className="card-badge">{proj.upgrades.length + " שידרוגים"}</span>
                             )}
-                            <span className="card-badge">{proj.upgrades.reduce((s, u) => s + u.alternatives.length, 0) + " חלופות"}</span>
+                            {proj.upgrades.reduce((s, u) => s + u.alternatives.length, 0) > 1 ? (
+                              <button
+                                className={"card-badge card-badge-btn" + (isExpanded && expandedUpgradeId ? " active" : "")}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (!isExpanded) { setExpandedProjectId(proj.id); setExpandedUpgradeId(proj.upgrades[0]?.id || null); }
+                                  else if (expandedUpgradeId) { setExpandedUpgradeId(null); }
+                                  else { setExpandedUpgradeId(proj.upgrades[0]?.id || null); }
+                                }}
+                              >
+                                {proj.upgrades.reduce((s, u) => s + u.alternatives.length, 0) + " חלופות"}
+                              </button>
+                            ) : (
+                              <span className="card-badge">{proj.upgrades.reduce((s, u) => s + u.alternatives.length, 0) + " חלופות"}</span>
+                            )}
                           </div>
                           <div className="card-date">{proj.date}</div>
                         </div>
 
                         {isExpanded && (
                           <div className="card-upgrades-grid">
-                            {proj.upgrades.map((upg, uIdx) => (
-                              <div
-                                key={upg.id}
-                                className="card-upgrade-item"
-                                onClick={() => { setSelectedProjectId(proj.id); setActiveUpgradeIdx(uIdx); setActiveAltIdx(0); setView("compare"); }}
-                              >
-                                <div className="card-upgrade-images">
+                            {proj.upgrades.map((upg, uIdx) => {
+                              const isUpgExpanded = expandedUpgradeId === upg.id;
+                              return (
+                              <div key={upg.id} className={"card-upgrade-item" + (isUpgExpanded ? " upgrade-expanded" : "")}>
+                                <div
+                                  className="card-upgrade-images"
+                                  onClick={() => { setSelectedProjectId(proj.id); setActiveUpgradeIdx(uIdx); setActiveAltIdx(0); setView("compare"); }}
+                                >
                                   {upg.beforeSrc && <img src={upg.beforeSrc} alt="לפני" className="card-upgrade-thumb" />}
                                   {upg.alternatives[0]?.afterSrc && <img src={upg.alternatives[0].afterSrc} alt="אחרי" className="card-upgrade-thumb" />}
                                 </div>
                                 <div className="card-upgrade-info">
-                                  <span className="card-upgrade-title">{upg.title || "שידרוג " + (uIdx + 1)}</span>
-                                  <span className="card-upgrade-count">{upg.alternatives.length + " חלופות"}</span>
+                                  <span
+                                    className="card-upgrade-title"
+                                    style={{ cursor: "pointer" }}
+                                    onClick={() => { setSelectedProjectId(proj.id); setActiveUpgradeIdx(uIdx); setActiveAltIdx(0); setView("compare"); }}
+                                  >
+                                    {upg.title || "שידרוג " + (uIdx + 1)}
+                                  </span>
+                                  {upg.alternatives.length > 1 ? (
+                                    <button
+                                      className={"card-alt-count-btn" + (isUpgExpanded ? " active" : "")}
+                                      onClick={(e) => { e.stopPropagation(); setExpandedUpgradeId(isUpgExpanded ? null : upg.id); }}
+                                    >
+                                      {(isUpgExpanded ? "▾ " : "◂ ") + upg.alternatives.length + " חלופות"}
+                                    </button>
+                                  ) : (
+                                    <span className="card-upgrade-count">{upg.alternatives.length + " חלופות"}</span>
+                                  )}
                                 </div>
+                                {isUpgExpanded && upg.alternatives.length > 0 && (
+                                  <div className="card-alts-strip">
+                                    {upg.alternatives.map((alt, aIdx) => (
+                                      <div
+                                        key={alt.id}
+                                        className="card-alt-thumb-item"
+                                        onClick={() => { setSelectedProjectId(proj.id); setActiveUpgradeIdx(uIdx); setActiveAltIdx(aIdx); setView("compare"); }}
+                                      >
+                                        {alt.afterSrc && <img src={alt.afterSrc} alt={alt.label} className="card-alt-thumb-img" />}
+                                        <span className="card-alt-thumb-label">{alt.label}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         )}
                       </div>
