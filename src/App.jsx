@@ -761,7 +761,7 @@ export default function App() {
                 </div>
                 {tableEditMode && (
                   <div className="edit-mode-banner">
-                    <span>מצב עריכה</span> — ניתן לערוך שדות, להעביר שידרוגים בין פרויקטים
+                    <span>מצב עריכה</span> — שנו את שם הפרויקט בעמודה הראשונה כדי להעביר שידרוג לפרויקט אחר
                     {pendingMoves.length > 0 && <span className="pending-badge">{pendingMoves.length} העברות ממתינות</span>}
                   </div>
                 )}
@@ -797,7 +797,6 @@ export default function App() {
                             <span>חלופה</span>
                             <span className="sort-icon">{sortIcon("altLabel")}</span>
                           </th>
-                          {tableEditMode && <th style={{ width: 120 }}>העברה לפרויקט</th>}
                         </tr>
                       </thead>
                       <tbody>
@@ -806,7 +805,7 @@ export default function App() {
                           return (
                             <React.Fragment key={projId}>
                               <tr className="group-header-row" onClick={() => toggleGroup(projId)}>
-                                <td colSpan={tableEditMode ? 5 : 4}>
+                                <td colSpan={4}>
                                   <span className={"group-toggle" + (collapsed ? " collapsed" : "")}>▾</span>
                                   <span className="group-title">{groupRows[0].subject}</span>
                                   <span className="group-count">{groupRows.length + " רשומות"}</span>
@@ -815,16 +814,26 @@ export default function App() {
                               {!collapsed && groupRows.map((row, ri) => {
                                 const moveDest = getMoveDest(row.upgradeId);
                                 const isPendingMove = !!moveDest;
+                                const destProj = isPendingMove ? projects.find((p) => p.id === moveDest) : null;
                                 return (
                                 <tr key={projId + "-" + ri} className={"data-row" + (isPendingMove ? " pending-move" : "")}>
                                   <td>
-                                    {tableEditMode ? (
-                                      <span className="table-cell-view">{row.subject}</span>
+                                    {tableEditMode && row.upgradeId ? (
+                                      <select
+                                        className="table-move-select"
+                                        value={moveDest || row.projectId}
+                                        onChange={(e) => moveUpgrade(row.upgradeId, row.projectId, Number(e.target.value))}
+                                      >
+                                        {projects.map((p) => (
+                                          <option key={p.id} value={p.id}>{p.subject}</option>
+                                        ))}
+                                      </select>
                                     ) : (
                                       <button className="table-link" onClick={() => goToProject(row.projectId, 0, 0)}>
                                         {row.subject}
                                       </button>
                                     )}
+                                    {isPendingMove && <span className="move-arrow">← {destProj?.subject}</span>}
                                   </td>
                                   <td>
                                     {tableEditMode ? (
@@ -870,23 +879,6 @@ export default function App() {
                                       <span>—</span>
                                     )}
                                   </td>
-                                  {tableEditMode && (
-                                    <td>
-                                      {row.upgradeId && (
-                                        <select
-                                          className="table-move-select"
-                                          value={moveDest || row.projectId}
-                                          onChange={(e) => moveUpgrade(row.upgradeId, row.projectId, Number(e.target.value))}
-                                        >
-                                          {projects.map((p) => (
-                                            <option key={p.id} value={p.id}>
-                                              {p.id === row.projectId ? p.subject + " (נוכחי)" : p.subject}
-                                            </option>
-                                          ))}
-                                        </select>
-                                      )}
-                                    </td>
-                                  )}
                                 </tr>
                                 );
                               })}
