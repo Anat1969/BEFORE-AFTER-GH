@@ -199,6 +199,7 @@ export default function App() {
   const [tableSortKey, setTableSortKey] = useState("subject");
   const [tableSortDir, setTableSortDir] = useState("asc");
   const [tableCollapsed, setTableCollapsed] = useState({});
+  const [tableSearch, setTableSearch] = useState("");
 
   const [theme, setTheme] = useState(() => {
     try { return localStorage.getItem(THEME_KEY) || "dark"; } catch { return "dark"; }
@@ -597,7 +598,17 @@ export default function App() {
               }
             });
 
-            const sorted = [...rows].sort((a, b) => {
+            const searchTerm = tableSearch.trim().toLowerCase();
+            const filtered = searchTerm
+              ? rows.filter((r) =>
+                  r.subject.toLowerCase().includes(searchTerm) ||
+                  r.contact.toLowerCase().includes(searchTerm) ||
+                  r.upgradeTitle.toLowerCase().includes(searchTerm) ||
+                  r.altLabel.toLowerCase().includes(searchTerm)
+                )
+              : rows;
+
+            const sorted = [...filtered].sort((a, b) => {
               const va = a[tableSortKey] || "";
               const vb = b[tableSortKey] || "";
               const cmp = String(va).localeCompare(String(vb), "he");
@@ -637,11 +648,32 @@ export default function App() {
 
             return (
               <div className="contacts-table-wrapper glass-card">
-                <h2>טבלת אנשי קשר ופרויקטים</h2>
+                <div className="table-header-row">
+                  <h2>טבלת אנשי קשר ופרויקטים</h2>
+                  <div className="table-search-box">
+                    <span className="search-icon">🔍</span>
+                    <input
+                      type="text"
+                      value={tableSearch}
+                      onChange={(e) => setTableSearch(e.target.value)}
+                      placeholder="חיפוש לפי מילת מפתח..."
+                      className="table-search-input"
+                    />
+                    {tableSearch && (
+                      <button className="search-clear" onClick={() => setTableSearch("")}>&times;</button>
+                    )}
+                  </div>
+                </div>
+                {searchTerm && <div className="search-results-count">{filtered.length + " תוצאות מתוך " + rows.length}</div>}
                 {rows.length === 0 ? (
                   <div className="empty-state" style={{ padding: "40px 20px" }}>
                     <p>אין פרויקטים להצגה</p>
                     <button className="nav-btn" onClick={() => setView("add")} style={{ marginTop: 12 }}>פרויקט ראשון</button>
+                  </div>
+                ) : filtered.length === 0 ? (
+                  <div className="empty-state" style={{ padding: "40px 20px" }}>
+                    <p>לא נמצאו תוצאות עבור "{tableSearch}"</p>
+                    <button className="btn-secondary" onClick={() => setTableSearch("")} style={{ marginTop: 12 }}>ניקוי חיפוש</button>
                   </div>
                 ) : (
                   <div className="contacts-table-scroll">
