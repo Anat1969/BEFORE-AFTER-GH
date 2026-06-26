@@ -384,6 +384,7 @@ export default function App() {
           <div className="orb orb-1" />
           <div className="orb orb-2" />
           <div className="orb orb-3" />
+          <div className="orb orb-4" />
         </div>
         <div className="loading-screen">
           <div className="loading-spinner" />
@@ -400,6 +401,7 @@ export default function App() {
           <div className="orb orb-1" />
           <div className="orb orb-2" />
           <div className="orb orb-3" />
+          <div className="orb orb-4" />
         </div>
 
         {saveStatus && (
@@ -516,6 +518,11 @@ export default function App() {
                   <button className="nav-btn" onClick={() => setView("add")}>פרויקט ראשון</button>
                 </div>
               ) : (
+                <>
+                <div className="library-hint">
+                  <span className="hint-icon">👆</span>
+                  <span>לחצו על פרויקט כדי להפעיל את סליידר ההשוואה לפני / אחרי</span>
+                </div>
                 <div className="library-grid">
                   {projects.map((proj) => {
                     const firstUpgrade = proj.upgrades[0];
@@ -537,7 +544,7 @@ export default function App() {
                           {proj.contact && <p style={{ color: "var(--text-muted)", marginTop: 2 }}>{proj.contact}</p>}
                           <div className="card-badges">
                             <span className="card-badge">{proj.upgrades.length + " שידרוגים"}</span>
-                            <span className="card-badge">{proj.upgrades.reduce((s, u) => s + u.alternatives.length, 0) + " חלופות"}</span>
+                            <span className="card-badge alt-badge">{proj.upgrades.reduce((s, u) => s + u.alternatives.length, 0) + " חלופות"}</span>
                           </div>
                           <div className="card-date">{proj.date}</div>
                         </div>
@@ -545,6 +552,7 @@ export default function App() {
                     );
                   })}
                 </div>
+                </>
               )}
             </>
           )}

@@ -52,9 +52,12 @@ body {
   min-height: 100vh;
   position: relative;
   background:
-    radial-gradient(ellipse 120% 80% at 50% -20%, rgba(62,232,224,0.04) 0%, transparent 50%),
-    radial-gradient(ellipse 80% 60% at 100% 100%, rgba(75,123,245,0.03) 0%, transparent 50%),
-    linear-gradient(180deg, #060a14 0%, #0a0e1c 50%, #060a14 100%);
+    radial-gradient(ellipse 140% 90% at 50% -25%, rgba(62,232,224,0.08) 0%, transparent 45%),
+    radial-gradient(ellipse 100% 70% at 0% 50%, rgba(75,123,245,0.06) 0%, transparent 50%),
+    radial-gradient(ellipse 90% 80% at 100% 80%, rgba(120,80,255,0.05) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 50% at 50% 100%, rgba(62,232,224,0.04) 0%, transparent 40%),
+    linear-gradient(180deg, #050810 0%, #0b1025 30%, #0d0e22 60%, #060a14 100%);
+  background-attachment: fixed;
 }
 
 .bg-orbs {
@@ -70,23 +73,31 @@ body {
 }
 
 .orb-1 {
-  width: 600px; height: 600px;
-  background: radial-gradient(circle, rgba(62,232,224,0.07), transparent 65%);
-  top: -15%; right: -10%;
+  width: 700px; height: 700px;
+  background: radial-gradient(circle, rgba(62,232,224,0.10), rgba(62,232,224,0.03) 40%, transparent 65%);
+  top: -18%; right: -12%;
 }
 
 .orb-2 {
-  width: 500px; height: 500px;
-  background: radial-gradient(circle, rgba(75,123,245,0.06), transparent 65%);
-  bottom: -10%; left: -8%;
+  width: 600px; height: 600px;
+  background: radial-gradient(circle, rgba(75,123,245,0.09), rgba(120,80,255,0.03) 40%, transparent 65%);
+  bottom: -12%; left: -10%;
   animation-delay: -8s;
 }
 
 .orb-3 {
-  width: 350px; height: 350px;
-  background: radial-gradient(circle, rgba(62,232,224,0.04), transparent 65%);
+  width: 400px; height: 400px;
+  background: radial-gradient(circle, rgba(62,232,224,0.06), transparent 65%);
   top: 45%; left: 25%;
   animation-delay: -16s;
+}
+
+.orb-4 {
+  width: 300px; height: 300px;
+  background: radial-gradient(circle, rgba(120,80,255,0.06), transparent 65%);
+  top: 20%; right: 30%;
+  animation-delay: -12s;
+  animation-duration: 30s;
 }
 
 @keyframes float {
@@ -589,6 +600,20 @@ body {
   letter-spacing: 0.2px;
 }
 
+.card-badge.alt-badge {
+  background:
+    linear-gradient(135deg, rgba(62,232,224,0.18), rgba(62,232,224,0.08));
+  border-color: rgba(62,232,224,0.25);
+  color: var(--cyan-bright);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15), 0 0 12px rgba(62,232,224,0.08);
+  animation: altPulse 3s ease-in-out infinite;
+}
+
+@keyframes altPulse {
+  0%, 100% { box-shadow: 0 2px 8px rgba(0,0,0,0.15), 0 0 12px rgba(62,232,224,0.08); }
+  50% { box-shadow: 0 2px 8px rgba(0,0,0,0.15), 0 0 20px rgba(62,232,224,0.18); }
+}
+
 .card-date { font-size: 10px; color: var(--text-muted); margin-top: 10px; }
 
 /* ══════════════════════════════════════════
@@ -835,9 +860,12 @@ body {
 
 [data-theme="light"] .app {
   background:
-    radial-gradient(ellipse 120% 80% at 50% -20%, rgba(12,181,173,0.06) 0%, transparent 50%),
-    radial-gradient(ellipse 80% 60% at 100% 100%, rgba(58,106,232,0.04) 0%, transparent 50%),
-    linear-gradient(180deg, #eef1f5 0%, #e4e8f0 50%, #eef1f5 100%);
+    radial-gradient(ellipse 140% 90% at 50% -25%, rgba(12,181,173,0.10) 0%, transparent 45%),
+    radial-gradient(ellipse 100% 70% at 0% 50%, rgba(58,106,232,0.07) 0%, transparent 50%),
+    radial-gradient(ellipse 90% 80% at 100% 80%, rgba(120,80,255,0.05) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 50% at 50% 100%, rgba(12,181,173,0.05) 0%, transparent 40%),
+    linear-gradient(180deg, #f0f3f7 0%, #e6eaf2 30%, #e8ecf4 60%, #eef1f5 100%);
+  background-attachment: fixed;
 }
 
 [data-theme="light"] .orb-1 {
@@ -850,6 +878,10 @@ body {
 
 [data-theme="light"] .orb-3 {
   background: radial-gradient(circle, rgba(12,181,173,0.04), transparent 65%);
+}
+
+[data-theme="light"] .orb-4 {
+  background: radial-gradient(circle, rgba(120,80,255,0.05), transparent 65%);
 }
 
 [data-theme="light"] .header {
@@ -996,6 +1028,13 @@ body {
   border-color: rgba(58,106,232,0.1);
 }
 
+[data-theme="light"] .card-badge.alt-badge {
+  background: linear-gradient(135deg, rgba(12,181,173,0.12), rgba(12,181,173,0.06));
+  border-color: rgba(12,181,173,0.2);
+  color: var(--cyan);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06), 0 0 10px rgba(12,181,173,0.06);
+}
+
 [data-theme="light"] .compare-label {
   background: rgba(255,255,255,0.85);
   border-color: rgba(0,0,0,0.06);
@@ -1118,6 +1157,44 @@ body {
   .nav-btn { font-size: 11px; padding: 6px 10px; }
   .container { padding: 12px 8px; }
   .upload-box { width: 90px; height: 70px; }
+}
+
+/* Library hint */
+.library-hint {
+  text-align: center;
+  padding: 14px 20px;
+  margin-bottom: 20px;
+  font-size: 13px;
+  color: var(--cyan);
+  background:
+    linear-gradient(135deg, rgba(62,232,224,0.06), rgba(75,123,245,0.04));
+  border: 1px solid rgba(62,232,224,0.12);
+  border-radius: var(--radius-sm);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.04);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-weight: 500;
+  letter-spacing: 0.2px;
+}
+
+.library-hint .hint-icon {
+  font-size: 18px;
+  filter: drop-shadow(0 0 6px var(--cyan-glow));
+  animation: hintBounce 2s ease-in-out infinite;
+}
+
+@keyframes hintBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+[data-theme="light"] .library-hint {
+  background: linear-gradient(135deg, rgba(12,181,173,0.08), rgba(58,106,232,0.05));
+  border-color: rgba(12,181,173,0.15);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
 }
 
 /* Save indicator */
