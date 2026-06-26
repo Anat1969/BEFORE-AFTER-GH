@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [main, claude/modest-franklin-a7y40i]
+    branches: [main, claude/modest-franklin-a7y40i, claude/optimistic-einstein-sh4w57]
 
 permissions:
   contents: read
