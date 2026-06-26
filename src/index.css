@@ -591,6 +591,115 @@ body {
 
 .card-date { font-size: 10px; color: var(--text-muted); margin-top: 10px; }
 
+.card-badge-btn {
+  cursor: pointer;
+  border: none;
+  font-family: inherit;
+  transition: all 0.3s var(--ease-out);
+}
+
+.card-badge-btn:hover {
+  background: linear-gradient(135deg, rgba(62,232,224,0.15), rgba(75,123,245,0.1));
+  border-color: var(--cyan-dim);
+  color: var(--cyan);
+  transform: translateY(-1px);
+}
+
+.card-badge-btn.active {
+  background: linear-gradient(135deg, rgba(62,232,224,0.2), rgba(75,123,245,0.12));
+  color: var(--cyan);
+  border-color: var(--cyan-dim);
+}
+
+.library-card { cursor: default; }
+.library-card .card-preview { cursor: pointer; }
+
+.card-upgrades-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+  padding: 16px 22px 20px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  animation: expandIn 0.3s var(--ease-out);
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes expandIn {
+  from { opacity: 0; max-height: 0; padding-top: 0; padding-bottom: 0; }
+  to { opacity: 1; max-height: 600px; }
+}
+
+.card-upgrade-item {
+  background: linear-gradient(165deg, rgba(255,255,255,0.04) 0%, rgba(0,0,0,0.12) 100%);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.3s var(--ease-out);
+}
+
+.card-upgrade-item:hover {
+  border-color: var(--cyan-dim);
+  transform: translateY(-3px);
+  box-shadow: 0 0 20px var(--cyan-glow), 0 8px 24px rgba(0,0,0,0.3);
+}
+
+.card-upgrade-images {
+  display: flex;
+  height: 90px;
+  overflow: hidden;
+}
+
+.card-upgrade-thumb {
+  flex: 1;
+  min-width: 0;
+  object-fit: cover;
+  height: 100%;
+  transition: transform 0.4s var(--ease-out);
+}
+
+.card-upgrade-item:hover .card-upgrade-thumb {
+  transform: scale(1.05);
+}
+
+.card-upgrade-images .card-upgrade-thumb + .card-upgrade-thumb {
+  border-right: 2px solid var(--cyan);
+}
+
+.card-upgrade-info {
+  padding: 8px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+}
+
+.card-upgrade-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.card-upgrade-count {
+  font-size: 10px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+[data-theme="light"] .card-upgrades-grid {
+  border-top-color: rgba(0,0,0,0.06);
+}
+
+[data-theme="light"] .card-upgrade-item {
+  background: linear-gradient(165deg, rgba(255,255,255,0.6) 0%, rgba(240,242,248,0.7) 100%);
+  border-color: rgba(0,0,0,0.06);
+}
+
+[data-theme="light"] .card-upgrade-item:hover {
+  box-shadow: 0 0 16px rgba(12,181,173,0.1), 0 6px 16px rgba(0,0,0,0.06);
+}
+
 /* ══════════════════════════════════════════
    COMPARE VIEW — full-depth slider
    ══════════════════════════════════════════ */
@@ -1140,6 +1249,10 @@ body {
   .compare-meta { padding: 16px; }
   .add-alt-inline { padding: 8px 14px; }
   .card-info { padding: 14px 16px; }
+  .card-upgrades-grid { grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px 14px 14px; }
+  .card-upgrade-images { height: 70px; }
+  .card-upgrade-info { padding: 6px 8px; }
+  .card-upgrade-title { font-size: 11px; }
   .card-info h3 { font-size: 15px; }
   .card-badges { gap: 4px; }
   .card-badge { font-size: 10px; padding: 3px 8px; }

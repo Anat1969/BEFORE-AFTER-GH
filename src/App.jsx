@@ -202,6 +202,7 @@ export default function App() {
   const [tableSearch, setTableSearch] = useState("");
   const [tableEditMode, setTableEditMode] = useState(false);
   const [pendingMoves, setPendingMoves] = useState([]);
+  const [expandedProjectId, setExpandedProjectId] = useState(null);
 
   const [theme, setTheme] = useState(() => {
     try { return localStorage.getItem(THEME_KEY) || "dark"; } catch { return "dark"; }
@@ -528,9 +529,10 @@ export default function App() {
                   {projects.map((proj) => {
                     const firstUpgrade = proj.upgrades[0];
                     const firstAlt = firstUpgrade?.alternatives[0];
+                    const isExpanded = expandedProjectId === proj.id;
                     return (
-                      <div key={proj.id} className="library-card glass-card" onClick={() => openProject(proj.id)}>
-                        <div className="card-preview">
+                      <div key={proj.id} className={"library-card glass-card" + (isExpanded ? " expanded" : "")}>
+                        <div className="card-preview" onClick={() => openProject(proj.id)}>
                           {firstUpgrade?.beforeSrc && <img src={firstUpgrade.beforeSrc} alt="before" />}
                           <div className="divider-line" />
                           {firstAlt?.afterSrc && <img src={firstAlt.afterSrc} alt="after" />}
@@ -540,15 +542,48 @@ export default function App() {
                           </div>
                         </div>
                         <div className="card-info">
-                          <h3>{proj.subject}</h3>
-                          {proj.requirement && <p>{proj.requirement}</p>}
-                          {proj.contact && <p style={{ color: "var(--text-muted)", marginTop: 2 }}>{proj.contact}</p>}
+                          <div className="card-info-top" onClick={() => openProject(proj.id)} style={{ cursor: "pointer" }}>
+                            <h3>{proj.subject}</h3>
+                            {proj.requirement && <p>{proj.requirement}</p>}
+                            {proj.contact && <p style={{ color: "var(--text-muted)", marginTop: 2 }}>{proj.contact}</p>}
+                          </div>
                           <div className="card-badges">
-                            <span className="card-badge">{proj.upgrades.length + " שידרוגים"}</span>
+                            {proj.upgrades.length > 1 && (
+                              <button
+                                className={"card-badge card-badge-btn" + (isExpanded ? " active" : "")}
+                                onClick={(e) => { e.stopPropagation(); setExpandedProjectId(isExpanded ? null : proj.id); }}
+                              >
+                                {(isExpanded ? "▾ " : "◂ ") + proj.upgrades.length + " שידרוגים"}
+                              </button>
+                            )}
+                            {proj.upgrades.length <= 1 && (
+                              <span className="card-badge">{proj.upgrades.length + " שידרוגים"}</span>
+                            )}
                             <span className="card-badge">{proj.upgrades.reduce((s, u) => s + u.alternatives.length, 0) + " חלופות"}</span>
                           </div>
                           <div className="card-date">{proj.date}</div>
                         </div>
+
+                        {isExpanded && (
+                          <div className="card-upgrades-grid">
+                            {proj.upgrades.map((upg, uIdx) => (
+                              <div
+                                key={upg.id}
+                                className="card-upgrade-item"
+                                onClick={() => { setSelectedProjectId(proj.id); setActiveUpgradeIdx(uIdx); setActiveAltIdx(0); setView("compare"); }}
+                              >
+                                <div className="card-upgrade-images">
+                                  {upg.beforeSrc && <img src={upg.beforeSrc} alt="לפני" className="card-upgrade-thumb" />}
+                                  {upg.alternatives[0]?.afterSrc && <img src={upg.alternatives[0].afterSrc} alt="אחרי" className="card-upgrade-thumb" />}
+                                </div>
+                                <div className="card-upgrade-info">
+                                  <span className="card-upgrade-title">{upg.title || "שידרוג " + (uIdx + 1)}</span>
+                                  <span className="card-upgrade-count">{upg.alternatives.length + " חלופות"}</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
