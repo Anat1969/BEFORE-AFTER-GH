@@ -508,9 +508,9 @@ export default function App() {
                 <div className="empty-state">
                   <div className="empty-icon">
                     <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
-                      <rect x="4" y="12" width="24" height="40" rx="4" stroke="rgba(77,232,224,0.3)" strokeWidth="2" fill="rgba(77,232,224,0.05)"/>
-                      <rect x="36" y="12" width="24" height="40" rx="4" stroke="rgba(75,123,245,0.3)" strokeWidth="2" fill="rgba(75,123,245,0.05)"/>
-                      <line x1="32" y1="8" x2="32" y2="56" stroke="rgba(77,232,224,0.4)" strokeWidth="2" strokeDasharray="4 4"/>
+                      <rect x="4" y="12" width="24" height="40" rx="4" stroke="rgba(255,255,255,0.25)" strokeWidth="2" fill="rgba(255,255,255,0.03)"/>
+                      <rect x="36" y="12" width="24" height="40" rx="4" stroke="rgba(255,255,255,0.25)" strokeWidth="2" fill="rgba(255,255,255,0.03)"/>
+                      <line x1="32" y1="8" x2="32" y2="56" stroke="rgba(255,255,255,0.3)" strokeWidth="2" strokeDasharray="4 4"/>
                     </svg>
                   </div>
                   <p>הספריה ריקה</p>
