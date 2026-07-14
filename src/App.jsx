@@ -578,6 +578,20 @@ export default function App() {
                             )}
                           </div>
                           <div className="card-date">{proj.date}</div>
+                          <button className="share-btn card-share-btn" onClick={(e) => {
+                            e.stopPropagation();
+                            const url = "https://anat1969.github.io/BEFORE-AFTER-GH/";
+                            const text = `בוא/י לראות את פרויקט "${proj.subject}" באפליקציית השידרוגים שלי`;
+                            if (navigator.share) {
+                              navigator.share({ title: proj.subject, text, url }).catch(() => {});
+                            } else {
+                              navigator.clipboard.writeText(text + "\n" + url).then(() => {
+                                const btn = e.currentTarget;
+                                btn.textContent = "✓ הועתק";
+                                setTimeout(() => { btn.textContent = "📤 שיתוף"; }, 2000);
+                              }).catch(() => {});
+                            }
+                          }}>📤 שיתוף</button>
                         </div>
 
                         {isExpanded && (
