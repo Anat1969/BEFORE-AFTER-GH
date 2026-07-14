@@ -204,6 +204,7 @@ export default function App() {
   const [pendingMoves, setPendingMoves] = useState([]);
   const [expandedProjectId, setExpandedProjectId] = useState(null);
   const [expandedUpgradeId, setExpandedUpgradeId] = useState(null);
+  const [shareStatus, setShareStatus] = useState(null);
 
   const [theme, setTheme] = useState(() => {
     try { return localStorage.getItem(THEME_KEY) || "dark"; } catch { return "dark"; }
@@ -1071,6 +1072,28 @@ export default function App() {
                     <div style={{ display: "flex", gap: 8, marginTop: 14, flexWrap: "wrap" }}>
                       <button className="btn-primary" style={{ fontSize: 13, padding: "8px 18px" }} onClick={() => startEditProject(selectedProject)}>עריכת פרויקט</button>
                       <button className="btn-secondary" onClick={() => startAddUpgrade(selectedProject.id)}>+ שידרוג נוסף</button>
+                      <button className="share-btn" onClick={async () => {
+                        const url = "https://anat1969.github.io/BEFORE-AFTER-GH/";
+                        const text = `בוא/י לראות את פרויקט "${selectedProject.subject}" באפליקציית השידרוגים שלי`;
+                        if (navigator.share) {
+                          try {
+                            await navigator.share({ title: selectedProject.subject, text, url });
+                            setShareStatus("shared");
+                          } catch (e) {
+                            if (e.name !== "AbortError") setShareStatus("error");
+                          }
+                        } else {
+                          try {
+                            await navigator.clipboard.writeText(text + "\n" + url);
+                            setShareStatus("copied");
+                          } catch {
+                            setShareStatus("error");
+                          }
+                        }
+                        setTimeout(() => setShareStatus(null), 2500);
+                      }}>
+                        {shareStatus === "copied" ? "✓ הקישור הועתק" : shareStatus === "shared" ? "✓ שותף" : "📤 שיתוף פרויקט"}
+                      </button>
                       <button className="delete-btn" onClick={() => deleteProject(selectedProject.id)}>מחיקת פרויקט</button>
                     </div>
                   </div>
