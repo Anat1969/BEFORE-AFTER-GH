@@ -1,12 +1,13 @@
 import { useMemo, useState } from "react";
 import { Empty } from "../components/ui.jsx";
-import { STATUSES, coverOf, projectStats, statusLabel, matches, formatDate } from "../data/model.js";
+import { CompareThumb } from "../components/Compare.jsx";
+import { STATUSES, coverOf, projectStats, statusLabel, matches, formatDate, createdTime } from "../data/model.js";
 import { go } from "../lib/router.js";
 import { shareProject } from "../lib/share.js";
 
 const SORTS = [
-  { key: "new", label: "חדש קודם", fn: (a, b) => b.id - a.id },
-  { key: "old", label: "ישן קודם", fn: (a, b) => a.id - b.id },
+  { key: "new", label: "חדש קודם", fn: (a, b) => createdTime(b) - createdTime(a) },
+  { key: "old", label: "ישן קודם", fn: (a, b) => createdTime(a) - createdTime(b) },
   { key: "name", label: "לפי שם", fn: (a, b) => a.subject.localeCompare(b.subject, "he") },
   { key: "updated", label: "עודכן לאחרונה", fn: (a, b) => (b.updatedAt || 0) - (a.updatedAt || 0) },
 ];
@@ -65,18 +66,14 @@ export default function Library({ projects, route, editing, flash }) {
         <Empty title="אין תוצאות" text="נסו מילה אחרת או הסירו את הסינון." action={<button className="btn" onClick={() => { setQ(""); setStatus(""); }}>ניקוי חיפוש וסינון</button>} />
       ) : (
         <div className="grid">
-          {list.map((p) => {
+          {list.map((p, i) => {
             const c = coverOf(p);
             const s = projectStats(p);
             const expanded = open === p.id;
             return (
               <article key={p.id} className={"card tilt" + (expanded ? " expanded" : "")}>
                 <button className="card-cover" onClick={() => go("project/" + p.id)} aria-label={"פתיחת " + p.subject}>
-                  <span className="half">{c.before ? <img src={c.before} alt="" loading="lazy" /> : <span className="noimg">אין תמונה</span>}</span>
-                  <span className="half">{c.after ? <img src={c.after} alt="" loading="lazy" /> : <span className="noimg">אין חלופה</span>}</span>
-                  <span className="cover-seam" />
-                  <span className="cover-tag r label">לפני</span>
-                  <span className="cover-tag l label">{s.chosen ? "נבחרה" : "אחרי"}</span>
+                  <CompareThumb before={c.before} after={c.after} afterLabel={s.chosen ? "נבחרה" : "אחרי"} delay={i * 1.1} />
                 </button>
                 <div className="card-body">
                   <div className="card-top">

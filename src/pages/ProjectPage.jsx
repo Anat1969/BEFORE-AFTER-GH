@@ -126,7 +126,7 @@ export default function ProjectPage({ projects, route, editing, commit, flash })
               <CompareHold before={u.beforeSrc} after={alt.afterSrc} afterLabel={alt.label} />
             ) : mode === "all" ? (
               <div className="all-grid">
-                <figure className="all-item before"><img src={u.beforeSrc} alt="לפני" /><figcaption className="label">לפני</figcaption></figure>
+                <figure className="all-item before"><img className="cmp-before" src={u.beforeSrc} alt="לפני" /><figcaption className="label">לפני</figcaption></figure>
                 {u.alternatives.map((a, i) => (
                   <button key={a.id} className={"all-item" + (u.chosenAltId === a.id ? " chosen" : "")} onClick={() => { at(ui, i); setMode("slider"); }}>
                     <img src={a.afterSrc} alt={a.label} loading="lazy" />
@@ -135,7 +135,7 @@ export default function ProjectPage({ projects, route, editing, commit, flash })
                 ))}
               </div>
             ) : (
-              <CompareSlider key={u.id + "-" + alt.id} before={u.beforeSrc} after={alt.afterSrc} afterLabel={alt.label} />
+              <CompareSlider key={u.id + "-" + alt.id} before={u.beforeSrc} after={alt.afterSrc} afterLabel={alt.label} auto />
             )}
 
             {u.alternatives.length > 0 && (
