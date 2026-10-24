@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { loadProjects as dbLoad, saveProjects as dbSave } from "./db.js";
 import { cloudPull, cloudPush, mergeProjects } from "./cloud.js";
+import AIMenu from "./AIMenu.jsx";
 
 const THEME_KEY = "before-after-theme";
 
@@ -413,9 +414,6 @@ export default function App() {
         <div className="header">
           <h1>שידרוגים</h1>
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-            <button className="sync-btn" onClick={syncNow} title="סנכרון ענן">
-              {syncStatus === "syncing" ? "⟳" : syncStatus === "synced" ? "✓" : syncStatus === "error" ? "✗" : "☁"}
-            </button>
             <button
               className="theme-toggle"
               onClick={() => setTheme((t) => t === "dark" ? "light" : "dark")}
@@ -424,7 +422,13 @@ export default function App() {
               {theme === "dark" ? "☀️" : "🌙"}
             </button>
             <button className={"nav-btn" + (view === "library" ? " active" : "")} onClick={() => { setView("library"); setSelectedProjectId(null); setAddingToProject(null); }}>ספריה</button>
-            <button className={"nav-btn" + (view === "add" ? " active" : "")} onClick={() => { setView("add"); setAddingToProject(null); }}>פרויקט חדש</button>
+            <AIMenu
+              status={syncStatus === "syncing" ? "מסנכרן..." : syncStatus === "synced" ? "סונכרן" : syncStatus === "error" ? "שגיאה בסנכרון" : ""}
+              items={[
+                { label: "פרויקט חדש", pressed: view === "add", onSelect: () => { setView("add"); setAddingToProject(null); } },
+                { label: "סנכרון ענן", hint: "עכשיו", onSelect: syncNow },
+              ]}
+            />
           </div>
         </div>
 
