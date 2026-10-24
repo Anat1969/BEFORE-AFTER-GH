@@ -16,6 +16,9 @@ export default function useStore() {
   const deleted = useRef(getDeleted());
   const pushTimer = useRef(null);
   const pushing = useRef(null);
+  // מה שידוע על הענן: חותמת הזמן של השורה ותקציר {id, updatedAt} של הפרויקטים שבה
+  const remoteAt = useRef(null);
+  const remoteSig = useRef([]);
 
   const flash = useCallback((state, text, ms = 1800) => {
     setSave({ state, text });
@@ -35,18 +38,25 @@ export default function useStore() {
     const run = (async () => {
       setCloud((c) => ({ ...c, state: "syncing" }));
       try {
-        const remote = await cloudPull();
+        const remote = await cloudPull(remoteAt.current);
         const gone = Array.from(new Set([...deleted.current, ...remote.deleted]));
         deleted.current = gone;
         setDeleted(gone);
-        const merged = mergeProjects(current.current, remote.projects, gone);
-        if (!sameContent(merged, current.current)) {
-          apply(merged);
-          await saveProjects(current.current);
+        const remoteList = remote.unchanged ? remoteSig.current : remote.projects;
+        if (!remote.unchanged) {
+          remoteAt.current = remote.at;
+          remoteSig.current = remote.projects.map((p) => ({ id: p.id, updatedAt: p.updatedAt || 0 }));
+          const merged = mergeProjects(current.current, remote.projects, gone);
+          if (!sameContent(merged, current.current)) {
+            apply(merged);
+            const res = await saveProjects(current.current);
+            if (!res.ok) flash("error", "שמירה במכשיר נכשלה: " + (res.error?.message || "האחסון מלא"), 0);
+          }
         }
-        const remoteNorm = mergeProjects([], remote.projects, gone);
-        if (!sameContent(merged, remoteNorm) || remote.projects.length !== remoteNorm.length || gone.length > remote.deleted.length) {
-          await cloudPush(current.current, gone);
+        const remoteNorm = mergeProjects([], remoteList, gone);
+        if (!sameContent(current.current, remoteNorm) || remoteList.length !== remoteNorm.length || gone.length > remote.deleted.length) {
+          remoteAt.current = await cloudPush(current.current, gone);
+          remoteSig.current = current.current.map((p) => ({ id: p.id, updatedAt: p.updatedAt || 0 }));
         }
         setCloud({ state: "synced", at: Date.now() });
         if (!silent) flash("saved", "סונכרן עם הענן");
