@@ -109,34 +109,36 @@ export default function ProjectPage({ projects, route, editing, commit, flash })
               <button className="btn btn-ghost btn-sm" onClick={fullscreen}>מסך מלא</button>
             </div>
 
-            {!u.beforeSrc || !alt ? (
-              <div className="stage-missing">
-                <p>{!u.beforeSrc ? "חסרה תמונת לפני לשידרוג הזה." : "אין עדיין חלופות לשידרוג הזה."}</p>
-                {editing ? (
-                  !u.beforeSrc ? (
-                    <ImageDrop label="העלאת תמונת לפני" onImages={([s]) => saveUpgrade((x) => ({ ...x, beforeSrc: s }))} onError={(m) => flash("error", m, 5000)} />
-                  ) : null
-                ) : (
-                  <p className="muted">פותחים מצב עריכה בתפריט A&amp;I כדי להשלים.</p>
-                )}
-              </div>
-            ) : mode === "side" ? (
-              <CompareSide before={u.beforeSrc} after={alt.afterSrc} afterLabel={alt.label} />
-            ) : mode === "hold" ? (
-              <CompareHold before={u.beforeSrc} after={alt.afterSrc} afterLabel={alt.label} />
-            ) : mode === "all" ? (
-              <div className="all-grid">
-                <figure className="all-item before"><img className="cmp-before" src={u.beforeSrc} alt="לפני" /><figcaption className="label">לפני</figcaption></figure>
-                {u.alternatives.map((a, i) => (
-                  <button key={a.id} className={"all-item" + (u.chosenAltId === a.id ? " chosen" : "")} onClick={() => { at(ui, i); setMode("slider"); }}>
-                    <img src={a.afterSrc} alt={a.label} loading="lazy" />
-                    <span className="label">{a.label}{u.chosenAltId === a.id ? " · נבחרה" : ""}</span>
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <CompareSlider key={u.id + "-" + alt.id} before={u.beforeSrc} after={alt.afterSrc} afterLabel={alt.label} auto />
-            )}
+            <div className={"stage-view view-" + (!u.beforeSrc || !alt ? "missing" : mode)}>
+              {!u.beforeSrc || !alt ? (
+                <div className="stage-missing">
+                  <p>{!u.beforeSrc ? "חסרה תמונת לפני לשידרוג הזה." : "אין עדיין חלופות לשידרוג הזה."}</p>
+                  {editing ? (
+                    !u.beforeSrc ? (
+                      <ImageDrop label="העלאת תמונת לפני" onImages={([s]) => saveUpgrade((x) => ({ ...x, beforeSrc: s }))} onError={(m) => flash("error", m, 5000)} />
+                    ) : null
+                  ) : (
+                    <p className="muted">פותחים מצב עריכה בתפריט A&amp;I כדי להשלים.</p>
+                  )}
+                </div>
+              ) : mode === "side" ? (
+                <CompareSide before={u.beforeSrc} after={alt.afterSrc} afterLabel={alt.label} />
+              ) : mode === "hold" ? (
+                <CompareHold before={u.beforeSrc} after={alt.afterSrc} afterLabel={alt.label} />
+              ) : mode === "all" ? (
+                <div className="all-grid">
+                  <figure className="all-item before"><img className="cmp-before" src={u.beforeSrc} alt="לפני" /><figcaption className="label">לפני</figcaption></figure>
+                  {u.alternatives.map((a, i) => (
+                    <button key={a.id} className={"all-item" + (u.chosenAltId === a.id ? " chosen" : "")} onClick={() => { at(ui, i); setMode("slider"); }}>
+                      <img src={a.afterSrc} alt={a.label} loading="lazy" />
+                      <span className="label">{a.label}{u.chosenAltId === a.id ? " · נבחרה" : ""}</span>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <CompareSlider key={u.id + "-" + alt.id} before={u.beforeSrc} after={alt.afterSrc} afterLabel={alt.label} auto />
+              )}
+            </div>
 
             {u.alternatives.length > 0 && (
               <div className="alts" role="tablist" aria-label="חלופות">

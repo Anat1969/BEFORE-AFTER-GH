@@ -4,6 +4,7 @@ import { CompareThumb } from "../components/Compare.jsx";
 import { STATUSES, coverOf, projectStats, statusLabel, matches, formatDate, createdTime } from "../data/model.js";
 import { go } from "../lib/router.js";
 import { shareProject } from "../lib/share.js";
+import { useFitMode, useFitGrid } from "../lib/useFit.js";
 
 const SORTS = [
   { key: "new", label: "חדש קודם", fn: (a, b) => createdTime(b) - createdTime(a) },
@@ -22,6 +23,10 @@ export default function Library({ projects, route, editing, flash }) {
     () => projects.filter((p) => (!status || p.status === status) && matches(p, q)).sort(SORTS.find((s) => s.key === sort).fn),
     [projects, status, q, sort]
   );
+
+  // במחשב: כל הכרטיסים במסך אחד. כרטיס פתוח (רצועת שידרוגים) מחזיר לגלילה בתוך הרשת.
+  const fit = useFitMode();
+  const [gridRef, layout] = useFitGrid(list.length, { enabled: fit && open === null, body: 46, minWidth: 150, minCover: 70 });
 
   const setStatus = (s) => go("library" + (s ? "?status=" + s : ""), { replace: true });
 
@@ -65,7 +70,11 @@ export default function Library({ projects, route, editing, flash }) {
       {!list.length ? (
         <Empty title="אין תוצאות" text="נסו מילה אחרת או הסירו את הסינון." action={<button className="btn" onClick={() => { setQ(""); setStatus(""); }}>ניקוי חיפוש וסינון</button>} />
       ) : (
-        <div className="grid">
+        <div
+          ref={gridRef}
+          className={"grid" + (layout ? " fit" : "")}
+          style={layout ? { gridTemplateColumns: `repeat(${layout.cols}, minmax(0, 1fr))`, gridAutoRows: layout.rowH + "px" } : undefined}
+        >
           {list.map((p, i) => {
             const c = coverOf(p);
             const s = projectStats(p);

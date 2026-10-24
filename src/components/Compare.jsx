@@ -7,6 +7,7 @@ export function CompareSlider({ before, after, beforeLabel = "לפני", afterLa
   const box = useRef(null);
   const [pos, setPos] = useState(start);
   const [touched, setTouched] = useState(false);
+  const [ar, setAr] = useState(null);
   const dragging = useRef(false);
 
   const fromX = useCallback((x) => {
@@ -41,7 +42,7 @@ export function CompareSlider({ before, after, beforeLabel = "לפני", afterLa
     <div
       ref={box}
       className={"cmp" + (moving ? " auto" : "")}
-      style={moving ? undefined : { "--pos": pos + "%" }}
+      style={{ ...(moving ? null : { "--pos": pos + "%" }), ...(ar ? { "--ar": ar } : null) }}
       onPointerDown={down}
       onPointerMove={move}
       onPointerUp={up}
@@ -54,16 +55,19 @@ export function CompareSlider({ before, after, beforeLabel = "לפני", afterLa
       aria-valuenow={Math.round(pos)}
       onKeyDown={key}
     >
-      <CompareLayers before={before} after={after} beforeLabel={beforeLabel} afterLabel={afterLabel} />
+      <CompareLayers before={before} after={after} beforeLabel={beforeLabel} afterLabel={afterLabel} onRatio={setAr} />
       {!touched && <span className="cmp-hint">{auto ? "גררו כדי לעצור ולהשוות" : "גררו את הקו או השתמשו בחיצים"}</span>}
     </div>
   );
 }
 
-function CompareLayers({ before, after, beforeLabel, afterLabel, small }) {
+// onRatio מקבל את יחס הרוחב לגובה של תמונת לפני, כדי שההשוואה תתאים את עצמה למסך בלי לחתוך
+const ratioOf = (e) => e.currentTarget.naturalWidth / e.currentTarget.naturalHeight;
+
+function CompareLayers({ before, after, beforeLabel, afterLabel, small, onRatio }) {
   return (
     <>
-      {before ? <img className="cmp-before" src={before} alt={small ? "" : beforeLabel} draggable={false} loading={small ? "lazy" : undefined} /> : <span className="cmp-missing">אין תמונת לפני</span>}
+      {before ? <img className="cmp-before" src={before} alt={small ? "" : beforeLabel} draggable={false} loading={small ? "lazy" : undefined} onLoad={onRatio ? (e) => onRatio(ratioOf(e)) : undefined} /> : <span className="cmp-missing">אין תמונת לפני</span>}
       <span className="cmp-after">
         {after ? <img src={after} alt={small ? "" : afterLabel} draggable={false} loading={small ? "lazy" : undefined} /> : <span className="cmp-missing">אין תמונת אחרי</span>}
       </span>
@@ -95,9 +99,11 @@ export function CompareSide({ before, after, afterLabel }) {
 // לחיצה ממושכת מציגה את "לפני"; שחרור מחזיר ל"אחרי"
 export function CompareHold({ before, after, afterLabel }) {
   const [showBefore, setShowBefore] = useState(false);
+  const [ar, setAr] = useState(null);
   return (
     <div
       className="cmp cmp-hold"
+      style={ar ? { "--ar": ar } : undefined}
       onPointerDown={() => setShowBefore(true)}
       onPointerUp={() => setShowBefore(false)}
       onPointerLeave={() => setShowBefore(false)}
@@ -109,7 +115,7 @@ export function CompareHold({ before, after, afterLabel }) {
       aria-label="החזיקו כדי לראות את מצב לפני"
     >
       <img src={after} alt={afterLabel} draggable={false} />
-      <img src={before} alt="לפני" draggable={false} className={"cmp-before cmp-hold-before" + (showBefore ? " on" : "")} />
+      <img src={before} alt="לפני" draggable={false} className={"cmp-before cmp-hold-before" + (showBefore ? " on" : "")} onLoad={(e) => setAr(ratioOf(e))} />
       <span className="cmp-tag cmp-tag-before">{showBefore ? "לפני" : afterLabel}</span>
       <span className="cmp-hint">החזיקו לחוץ כדי לראות את מצב לפני</span>
     </div>
