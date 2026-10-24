@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
-// השוואת לפני/אחרי. "לפני" מימין (תחילת הקריאה), "אחרי" משמאל.
-// גרירה, לחיצה, מקלדת (חיצים, Home, End), ומצב הדגמה שנע לבד.
-export function CompareSlider({ before, after, beforeLabel = "לפני", afterLabel = "אחרי", demo = false, start = 50 }) {
+// השוואת לפני/אחרי. "לפני" מימין (תחילת הקריאה), "אחרי" משמאל, ותמונת לפני שקופה מעט כדי שיהיה ברור מה ישן ומה חדש.
+// מיקום הקו הוא משתנה CSS בשם --pos: במצב auto הוא נע לבד באנימציית CSS, ונעצר ברגע שנוגעים.
+// גרירה, לחיצה, מקלדת (חיצים, Home, End).
+export function CompareSlider({ before, after, beforeLabel = "לפני", afterLabel = "אחרי", auto = false, start = 50 }) {
   const box = useRef(null);
   const [pos, setPos] = useState(start);
   const [touched, setTouched] = useState(false);
@@ -13,21 +14,17 @@ export function CompareSlider({ before, after, beforeLabel = "לפני", afterLa
     setPos(Math.max(0, Math.min(100, ((x - r.left) / r.width) * 100)));
   }, []);
 
-  useEffect(() => {
-    if (!demo || touched || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    let raf, t0;
-    const step = (t) => {
-      t0 ??= t;
-      setPos(50 + Math.sin((t - t0) / 1400) * 32);
-      raf = requestAnimationFrame(step);
-    };
-    raf = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(raf);
-  }, [demo, touched]);
+  // נגיעה ראשונה: מתחילים מהמקום שבו האנימציה נמצאת עכשיו, בלי קפיצה
+  const take = () => {
+    if (touched) return;
+    const live = parseFloat(getComputedStyle(box.current).getPropertyValue("--pos"));
+    if (!Number.isNaN(live)) setPos(live);
+    setTouched(true);
+  };
 
   const down = (e) => {
+    take();
     dragging.current = true;
-    setTouched(true);
     box.current.setPointerCapture?.(e.pointerId);
     fromX(e.clientX);
   };
@@ -36,13 +33,15 @@ export function CompareSlider({ before, after, beforeLabel = "לפני", afterLa
   const key = (e) => {
     const d = e.shiftKey ? 10 : 3;
     const map = { ArrowLeft: -d, ArrowRight: d, Home: -100, End: 100 };
-    if (e.key in map) { e.preventDefault(); setTouched(true); setPos((p) => Math.max(0, Math.min(100, p + map[e.key]))); }
+    if (e.key in map) { e.preventDefault(); take(); setPos((p) => Math.max(0, Math.min(100, p + map[e.key]))); }
   };
 
+  const moving = auto && !touched;
   return (
     <div
       ref={box}
-      className="cmp"
+      className={"cmp" + (moving ? " auto" : "")}
+      style={moving ? undefined : { "--pos": pos + "%" }}
       onPointerDown={down}
       onPointerMove={move}
       onPointerUp={up}
@@ -55,24 +54,39 @@ export function CompareSlider({ before, after, beforeLabel = "לפני", afterLa
       aria-valuenow={Math.round(pos)}
       onKeyDown={key}
     >
-      {before ? <img src={before} alt={beforeLabel} draggable={false} /> : <div className="cmp-missing">אין תמונת לפני</div>}
-      <div className="cmp-after" style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}>
-        {after ? <img src={after} alt={afterLabel} draggable={false} /> : <div className="cmp-missing">אין תמונת אחרי</div>}
-      </div>
-      <div className="cmp-line" style={{ left: pos + "%" }}>
-        <span className="cmp-knob" aria-hidden="true" />
-      </div>
+      <CompareLayers before={before} after={after} beforeLabel={beforeLabel} afterLabel={afterLabel} />
+      {!touched && <span className="cmp-hint">{auto ? "גררו כדי לעצור ולהשוות" : "גררו את הקו או השתמשו בחיצים"}</span>}
+    </div>
+  );
+}
+
+function CompareLayers({ before, after, beforeLabel, afterLabel, small }) {
+  return (
+    <>
+      {before ? <img className="cmp-before" src={before} alt={small ? "" : beforeLabel} draggable={false} loading={small ? "lazy" : undefined} /> : <span className="cmp-missing">אין תמונת לפני</span>}
+      <span className="cmp-after">
+        {after ? <img src={after} alt={small ? "" : afterLabel} draggable={false} loading={small ? "lazy" : undefined} /> : <span className="cmp-missing">אין תמונת אחרי</span>}
+      </span>
+      <span className="cmp-line"><span className="cmp-knob" aria-hidden="true" /></span>
       <span className="cmp-tag cmp-tag-before">{beforeLabel}</span>
       <span className="cmp-tag cmp-tag-after">{afterLabel}</span>
-      {!touched && !demo && <span className="cmp-hint">גררו את הקו או השתמשו בחיצים</span>}
-    </div>
+    </>
+  );
+}
+
+// תמונה מונפשת לכרטיסים: אותה השוואה, בלי אינטראקציה. delay מפזר את הקצב בין כרטיסים.
+export function CompareThumb({ before, after, afterLabel = "אחרי", delay = 0 }) {
+  return (
+    <span className="cmp cmp-thumb auto" style={{ animationDelay: -delay + "s" }} aria-hidden="true">
+      <CompareLayers before={before} after={after} beforeLabel="לפני" afterLabel={afterLabel} small />
+    </span>
   );
 }
 
 export function CompareSide({ before, after, afterLabel }) {
   return (
     <div className="cmp-side">
-      <figure><img src={before} alt="לפני" /><figcaption className="label">לפני</figcaption></figure>
+      <figure className="is-before"><img className="cmp-before" src={before} alt="לפני" /><figcaption className="label">לפני</figcaption></figure>
       <figure><img src={after} alt={afterLabel} /><figcaption className="label">{afterLabel}</figcaption></figure>
     </div>
   );
@@ -95,7 +109,7 @@ export function CompareHold({ before, after, afterLabel }) {
       aria-label="החזיקו כדי לראות את מצב לפני"
     >
       <img src={after} alt={afterLabel} draggable={false} />
-      <img src={before} alt="לפני" draggable={false} className={"cmp-hold-before" + (showBefore ? " on" : "")} />
+      <img src={before} alt="לפני" draggable={false} className={"cmp-before cmp-hold-before" + (showBefore ? " on" : "")} />
       <span className="cmp-tag cmp-tag-before">{showBefore ? "לפני" : afterLabel}</span>
       <span className="cmp-hint">החזיקו לחוץ כדי לראות את מצב לפני</span>
     </div>

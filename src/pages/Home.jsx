@@ -1,4 +1,4 @@
-import { CompareSlider } from "../components/Compare.jsx";
+import { CompareSlider, CompareThumb } from "../components/Compare.jsx";
 import { Stat } from "../components/ui.jsx";
 import { coverOf, totals, statusLabel, STATUSES } from "../data/model.js";
 import { go } from "../lib/router.js";
@@ -36,7 +36,7 @@ export default function Home({ projects, editing }) {
           <div className="stage-3d">
             {cover ? (
               <>
-                <CompareSlider before={cover.before} after={cover.after} demo />
+                <CompareSlider before={cover.before} after={cover.after} auto />
                 <button className="stage-cap" onClick={() => go("project/" + featured.id)}>
                   <span className="label">פרויקט נבחר</span>
                   <strong>{featured.subject}</strong>
@@ -85,11 +85,11 @@ export default function Home({ projects, editing }) {
           </div>
           {recent.length ? (
             <div className="recent-strip">
-              {recent.map((p) => {
+              {recent.map((p, i) => {
                 const c = coverOf(p);
                 return (
                   <button key={p.id} className="recent tilt" onClick={() => go("project/" + p.id)}>
-                    <span className="recent-img">{c.after || c.before ? <img src={c.after || c.before} alt="" loading="lazy" /> : null}</span>
+                    <span className="recent-img">{c.after || c.before ? <CompareThumb before={c.before} after={c.after} delay={i * 1.3} /> : null}</span>
                     <span className="recent-t">{p.subject}</span>
                     <span className="label">{statusLabel(p.status)}</span>
                   </button>
