@@ -41,10 +41,10 @@
   --orb-a: rgba(62, 232, 224, 0.12);
   --orb-b: rgba(107, 140, 255, 0.1);
   --orb-c: rgba(212, 132, 79, 0.08);
-  /* תמונת "לפני": שקופה מעט על רקע כהה, כדי שיהיה ברור מה ישן */
-  --before-opacity: 0.72;
-  --before-filter: saturate(0.75);
-  --before-ground: #0b0f1a;
+  /* תמונת "לפני": שקיפות 10% על רקע בהיר, כך שהיא נראית מעט דהויה ולא כהה */
+  --before-opacity: 0.9;
+  --before-filter: none;
+  --before-ground: #ffffff;
 
   /* קצב */
   --s1: 4px; --s2: 8px; --s3: 16px; --s4: 24px; --s5: 32px; --s6: 48px; --s7: 72px;
@@ -79,7 +79,6 @@
   --orb-a: rgba(11, 143, 136, 0.12);
   --orb-b: rgba(53, 87, 214, 0.08);
   --orb-c: rgba(176, 95, 43, 0.1);
-  --before-ground: #f7f5f0;
   color-scheme: light;
 }
 
