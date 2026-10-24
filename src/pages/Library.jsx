@@ -1,13 +1,13 @@
 import { useMemo, useState } from "react";
 import { Empty } from "../components/ui.jsx";
 import { CompareThumb } from "../components/Compare.jsx";
-import { STATUSES, coverOf, projectStats, statusLabel, matches, formatDate } from "../data/model.js";
+import { STATUSES, coverOf, projectStats, statusLabel, matches, formatDate, createdTime } from "../data/model.js";
 import { go } from "../lib/router.js";
 import { shareProject } from "../lib/share.js";
 
 const SORTS = [
-  { key: "new", label: "חדש קודם", fn: (a, b) => b.id - a.id },
-  { key: "old", label: "ישן קודם", fn: (a, b) => a.id - b.id },
+  { key: "new", label: "חדש קודם", fn: (a, b) => createdTime(b) - createdTime(a) },
+  { key: "old", label: "ישן קודם", fn: (a, b) => createdTime(a) - createdTime(b) },
   { key: "name", label: "לפי שם", fn: (a, b) => a.subject.localeCompare(b.subject, "he") },
   { key: "updated", label: "עודכן לאחרונה", fn: (a, b) => (b.updatedAt || 0) - (a.updatedAt || 0) },
 ];

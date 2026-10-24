@@ -1,14 +1,16 @@
 import { CompareSlider, CompareThumb } from "../components/Compare.jsx";
 import { Stat } from "../components/ui.jsx";
-import { coverOf, totals, statusLabel, STATUSES } from "../data/model.js";
+import { coverOf, totals, statusLabel, STATUSES, byNewest } from "../data/model.js";
 import { go } from "../lib/router.js";
 
 // דף הבית: חזון, מפת התוכן, והדגמה חיה מתוך הפרויקטים עצמם.
 export default function Home({ projects, editing }) {
   const t = totals(projects);
-  const featured = projects.find((p) => { const c = coverOf(p); return c.before && c.after; });
+  // ההדגמה תמיד מהפרויקט האחרון שעלה (שיש בו גם לפני וגם חלופה)
+  const newest = byNewest(projects);
+  const featured = newest.find((p) => { const c = coverOf(p); return c.before && c.after; });
   const cover = featured ? coverOf(featured) : null;
-  const recent = projects.slice(0, 6);
+  const recent = newest.slice(0, 6);
   const byStatus = STATUSES.map((s) => ({ ...s, n: projects.filter((p) => p.status === s.key).length }));
   const max = Math.max(1, ...byStatus.map((s) => s.n));
 
@@ -36,9 +38,9 @@ export default function Home({ projects, editing }) {
           <div className="stage-3d">
             {cover ? (
               <>
-                <CompareSlider before={cover.before} after={cover.after} auto />
+                <CompareSlider key={featured.id} before={cover.before} after={cover.after} auto />
                 <button className="stage-cap" onClick={() => go("project/" + featured.id)}>
-                  <span className="label">פרויקט נבחר</span>
+                  <span className="label">הפרויקט האחרון שעלה</span>
                   <strong>{featured.subject}</strong>
                 </button>
               </>

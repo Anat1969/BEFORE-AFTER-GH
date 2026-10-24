@@ -97,6 +97,10 @@ export function matches(p, q) {
   return q.toLowerCase().split(/\s+/).filter(Boolean).every((w) => hay.includes(w));
 }
 
+// זמן יצירה במילישניות. מזהים ישנים הם Date.now(), חדשים הם Date.now()*1000.
+export const createdTime = (p) => p.createdAt || (p.id > 1e14 ? Math.floor(p.id / 1000) : p.id);
+export const byNewest = (list) => [...list].sort((a, b) => createdTime(b) - createdTime(a));
+
 export function formatDate(p) {
   if (p.date) return p.date;
   return new Date(Math.floor(p.id / 1000) > 1e12 ? Math.floor(p.id / 1000) : p.id).toLocaleDateString("he-IL");
