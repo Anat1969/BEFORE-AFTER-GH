@@ -1,16 +1,31 @@
-# React + Vite
+# שידרוגים · לפני ואחרי
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+ארכיון שידרוגים: לכל פרויקט, המצב הקיים, החלופות המוצעות וההחלטה שהתקבלה, עם השוואת לפני/אחרי.
 
-Currently, two official plugins are available:
+כתובת: https://anat1969.github.io/BEFORE-AFTER-GH/
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## הרצה
+```
+npm ci
+npm run dev       # פיתוח
+npm run build     # בנייה ל-dist
+npm run deploy    # בנייה ופריסה לענף gh-pages
+```
 
-## React Compiler
+## מבנה
+| תיקיה | תפקיד |
+|---|---|
+| `src/data/model.js` | מודל הנתונים ופעולות טהורות (עדכון, העברה, סטטיסטיקה) |
+| `src/data/db.js` | IndexedDB ראשי, localStorage גיבוי, צילומי מצב אוטומטיים, טיוטה |
+| `src/data/cloud.js` | סנכרון Supabase ומיזוג לפי `updatedAt` עם רשימת מחיקות |
+| `src/data/useStore.js` | מקור הנתונים היחיד: שמירה מקומית ב-await, דחיפה לענן אחרי משיכה ומיזוג |
+| `src/data/backup.js` | הורדת גיבוי מלא (כולל תמונות) ושחזור ממזג |
+| `src/lib/` | דחיסת תמונות (1200px, JPEG 0.6), ניתוב בכתובת, שיתוף |
+| `src/components/` | השוואה (גרירה, זו לצד זו, החזקה), העלאה, עורך שידרוג, תפריט A&I |
+| `src/pages/` | בית, ספריה, פרויקט, טופס, טבלה |
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## החלטות
+- **שמירת נתונים:** פורמט הענן זהה לגרסה הקודמת (שורה `all` בטבלה `before_after_projects`). שדות חדשים (`updatedAt`, `status`, `chosenAltId`) נוספים בלי לשבור גרסאות ישנות.
+- **אין מחיקה בשקט:** מחיקה נרשמת בשורה `deleted`. שחזור מגיבוי או מצילום מצב תמיד ממזג ולא מוחק.
+- **עריכה:** כל פעולות העריכה מאחורי "מצב עריכה" בתפריט A&I. במצב תצוגה הממשק נקי.
+- **JavaScript ולא TypeScript:** האפליקציה הקיימת ב-JSX; ההמרה נדחתה כדי לא לסכן את השדרוג.
