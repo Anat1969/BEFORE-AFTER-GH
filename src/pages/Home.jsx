@@ -1,113 +1,127 @@
-import { CompareSlider, CompareThumb } from "../components/Compare.jsx";
-import { Stat } from "../components/ui.jsx";
-import { coverOf, totals, STATUSES, byNewest } from "../data/model.js";
+import { useEffect, useState } from "react";
+import { CompareSlider, CompareStage } from "../components/Compare.jsx";
+import { coverOf, totals, STATUSES, byNewest, statusLabel, projectStats } from "../data/model.js";
 import { go } from "../lib/router.js";
+import { useFitMode } from "../lib/useFit.js";
 
-// דף הבית: חזון, מפת התוכן, והדגמה חיה מתוך הפרויקטים עצמם.
+const ROTATE_MS = 10000;
+const reduced = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+// דף הבית כאולם הקרנה: מתחיל בפרויקט האחרון שעלה, ומתחלף לבד כל 10 שניות.
+// מימין העדשה (מה מחכה להחלטה, מה מוצג עכשיו), במרכז הבמה, ולמטה סרט עם כל הפרויקטים.
 export default function Home({ projects, editing }) {
+  const fit = useFitMode();
   const t = totals(projects);
-  // ההדגמה תמיד מהפרויקט האחרון שעלה (שיש בו גם לפני וגם חלופה)
-  const newest = byNewest(projects);
-  const featured = newest.find((p) => { const c = coverOf(p); return c.before && c.after; });
-  const cover = featured ? coverOf(featured) : null;
-  const recent = newest.slice(0, 6);
+  const reel = byNewest(projects).filter((p) => { const c = coverOf(p); return c.before && c.after; });
+  const [idx, setIdx] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const n = reel.length;
+  const i = n ? idx % n : 0;
+  const cur = reel[i];
+
+  useEffect(() => {
+    if (paused || n < 2 || reduced()) return;
+    const id = setTimeout(() => setIdx((x) => (x + 1) % n), ROTATE_MS);
+    return () => clearTimeout(id);
+  }, [idx, paused, n]);
+
+  const pending = projects.filter((p) => p.upgrades.some((u) => u.alternatives.length && !u.chosenAltId)).length;
   const byStatus = STATUSES.map((s) => ({ ...s, n: projects.filter((p) => p.status === s.key).length }));
   const max = Math.max(1, ...byStatus.map((s) => s.n));
+  const pick = (k) => { setIdx(k); setPaused(true); };
 
-  // במחשב: מסך אחד בלי גלילה (טקסט ומספרים מימין, הדגמה ופרויקטים אחרונים משמאל). בנייד: ערימה רגילה.
+  if (!projects.length)
+    return (
+      <div className="home home-empty">
+        <section className="home-lens">
+          <span className="label">ארכיון שידרוגים · לפני ואחרי</span>
+          <h1>כל שינוי במרחב, לפני ואחרי.</h1>
+          <p className="lead">הספריה ריקה. פותחים את תפריט A&amp;I ובוחרים <b>פרויקט חדש</b>.</p>
+        </section>
+      </div>
+    );
+
+  const c = cur ? coverOf(cur) : null;
+  const s = cur ? projectStats(cur) : null;
+
   return (
     <div className="home">
-      <section className="home-text">
+      <section className="home-lens">
         <span className="label">ארכיון שידרוגים · לפני ואחרי</span>
         <h1>
-          כל שינוי במרחב,
-          <br />
-          <em>מתועד, מושווה ונבחר.</em>
+          {pending ? (
+            <><b className="num">{pending}</b> מתוך {t.projects} פרויקטים מחכים להחלטה</>
+          ) : (
+            <>כל {t.projects} הפרויקטים הוכרעו</>
+          )}
         </h1>
         <p className="lead">
-          מאגר אחד לכל פרויקט: המצב הקיים, החלופות וההחלטה שהתקבלה. משווים בגרירה, מסמנים חלופה נבחרת ומשתפים קישור ישיר.
+          <b>{t.alts}</b> חלופות ו-<b>{t.images}</b> תמונות. גוררים את הקו, משווים, ובוחרים חלופה בכל פרויקט.
         </p>
-        <div className="hero-actions">
-          <button className="btn btn-primary" onClick={() => go("library")}>לספריית הפרויקטים</button>
-          <button className="btn" onClick={() => go("table")}>לטבלת אנשי הקשר</button>
-          {editing && <button className="btn" onClick={() => go("new")}>פרויקט חדש</button>}
-        </div>
-        <ol className="flow" aria-label="איך זה עובד">
-          {[
-            ["01", "מתעדים", "צילום המצב הקיים"],
-            ["02", "מציעים", "חלופות והדמיות"],
-            ["03", "משווים", "גרירה, זו לצד זו, החזקה"],
-            ["04", "מחליטים", "חלופה נבחרת ושלב"],
-          ].map(([n, h, p]) => (
-            <li key={n} className="flow-step">
-              <span className="flow-n">{n}</span>
-              <strong>{h}</strong>
-              <span className="flow-p">{p}</span>
-            </li>
-          ))}
-        </ol>
-      </section>
 
-      <section className="home-stage hero-stage" aria-label="הדגמה">
-        <div className="stage-3d">
-          {cover ? (
-            <>
-              <CompareSlider key={featured.id} before={cover.before} after={cover.after} auto />
-              <button className="stage-cap" onClick={() => go("project/" + featured.id)}>
-                <span className="label">הפרויקט האחרון שעלה</span>
-                <strong>{featured.subject}</strong>
-              </button>
-            </>
-          ) : (
-            <div className="stage-placeholder">
-              <span className="label">לפני</span>
-              <span className="label">אחרי</span>
-              <p>{projects.length ? "הוסיפו תמונות לפרויקט כדי לראות כאן הדגמה חיה" : "הפרויקט הראשון יופיע כאן כהדגמה חיה"}</p>
+        {cur && (
+          <div className="now panel" onMouseEnter={() => setPaused(true)}>
+            <div className="now-top">
+              <span className="label">מוצג עכשיו · {i + 1} מתוך {n}</span>
+              <span className={"status st-" + cur.status}>{statusLabel(cur.status)}</span>
             </div>
-          )}
-        </div>
-      </section>
+            <h2>{cur.subject}</h2>
+            <p className="muted">
+              {[cur.contact, s.alts + " חלופות", s.chosen ? "נבחרה חלופה" : "טרם נבחרה חלופה"].filter(Boolean).join(" · ")}
+            </p>
+            <div className="now-actions">
+              <button className="btn btn-primary" onClick={() => go("project/" + cur.id)}>פתיחת הפרויקט</button>
+              <button className="btn" onClick={() => pick((i - 1 + n) % n)} disabled={n < 2}>הקודם</button>
+              <button className="btn" onClick={() => pick((i + 1) % n)} disabled={n < 2}>הבא</button>
+            </div>
+            {n > 1 && (
+              <span className={"now-timer" + (paused ? " paused" : "")} key={cur.id + String(paused)} aria-hidden="true">
+                <i style={{ animationDuration: ROTATE_MS + "ms" }} />
+              </span>
+            )}
+          </div>
+        )}
 
-      <section className="home-info">
-        <div className="stats-band panel" aria-label="תמונת מצב">
-          <Stat n={t.projects} label="פרויקטים" />
-          <Stat n={t.upgrades} label="שידרוגים" />
-          <Stat n={t.alts} label="חלופות" />
-          <Stat n={t.chosen} label="החלטות" />
-          <Stat n={t.contacts} label="אנשי קשר" />
-          <Stat n={t.images} label="תמונות" />
-        </div>
-        <div className="status-chart panel" aria-label="פרויקטים לפי שלב">
-          {byStatus.map((s) => (
-            <button key={s.key} className="bar-row" onClick={() => go("library?status=" + s.key)}>
-              <span className="bar-l">{s.label}</span>
-              <span className="bar"><span className={"bar-fill st-" + s.key} style={{ width: (s.n / max) * 100 + "%" }} /></span>
-              <span className="bar-n">{s.n}</span>
+        <div className="status-chart" aria-label="פרויקטים לפי שלב">
+          <span className="label">פרויקטים לפי שלב · לחיצה מסננת את הספריה</span>
+          {byStatus.map((b) => (
+            <button key={b.key} className="bar-row" onClick={() => go("library?status=" + b.key)}>
+              <span className="bar-l">{b.label}</span>
+              <span className="bar"><span className={"bar-fill st-" + b.key} style={{ width: (b.n / max) * 100 + "%" }} /></span>
+              <span className="bar-n">{b.n}</span>
             </button>
           ))}
         </div>
+
+        <div className="home-links">
+          <button className="btn btn-ghost" onClick={() => go("library")}>כל הספריה</button>
+          <button className="btn btn-ghost" onClick={() => go("table")}>טבלת אנשי קשר</button>
+          {editing && <button className="btn btn-ghost" onClick={() => go("new")}>פרויקט חדש</button>}
+        </div>
       </section>
 
-      <section className="home-recent">
-        <div className="section-head">
-          <h2>נוספו לאחרונה</h2>
-          <button className="btn btn-ghost btn-sm" onClick={() => go("library")}>כל הספריה</button>
-        </div>
-        {recent.length ? (
-          <div className="recent-strip">
-            {recent.map((p, i) => {
-              const c = coverOf(p);
-              return (
-                <button key={p.id} className="recent tilt" onClick={() => go("project/" + p.id)} title={p.subject}>
-                  <span className="recent-img">{c.after || c.before ? <CompareThumb before={c.before} after={c.after} delay={i * 1.3} /> : null}</span>
-                  <span className="recent-t">{p.subject}</span>
-                </button>
-              );
-            })}
-          </div>
+      <section className="home-stage" aria-label={cur ? "השוואה: " + cur.subject : "הדגמה"}>
+        {cur ? (
+          fit ? (
+            <CompareStage key={cur.id} before={c.before} after={c.after} auto />
+          ) : (
+            <CompareSlider key={cur.id} before={c.before} after={c.after} auto />
+          )
         ) : (
-          <p className="muted">עדיין אין פרויקטים. פותחים מצב עריכה בתפריט A&amp;I ומוסיפים את הראשון.</p>
+          <p className="muted">הוסיפו תמונת לפני וחלופה לפרויקט כדי לראות כאן השוואה חיה.</p>
         )}
+      </section>
+
+      <section className="reel" aria-label="כל הפרויקטים">
+        {reel.map((p, k) => {
+          const cc = coverOf(p);
+          return (
+            <button key={p.id} className={"reel-item" + (k === i ? " on" : "")} aria-pressed={k === i} onClick={() => pick(k)} title={p.subject}>
+              <img src={cc.after} alt="" loading="lazy" />
+              <span className="reel-name">{p.subject}</span>
+            </button>
+          );
+        })}
       </section>
     </div>
   );

@@ -26,7 +26,7 @@ export default function Library({ projects, route, editing, flash }) {
 
   // במחשב: כל הכרטיסים במסך אחד. כרטיס פתוח (רצועת שידרוגים) מחזיר לגלילה בתוך הרשת.
   const fit = useFitMode();
-  const [gridRef, layout] = useFitGrid(list.length, { enabled: fit && open === null, body: 46, minWidth: 150, minCover: 70 });
+  const [gridRef, layout] = useFitGrid(list.length, { enabled: fit && open === null, body: 46, minWidth: 150, minCover: 70, ratio: 1.1 });
 
   const setStatus = (s) => go("library" + (s ? "?status=" + s : ""), { replace: true });
 
@@ -94,7 +94,7 @@ export default function Library({ projects, route, editing, flash }) {
                   {p.contact && <p className="card-contact">{p.contact}</p>}
                   <div className="card-foot">
                     <button className={"chip" + (expanded ? " on" : "")} aria-expanded={expanded} onClick={() => setOpen(expanded ? null : p.id)}>
-                      {s.upgrades} שידרוגים · {s.alts} חלופות
+                      {(s.upgrades > 1 ? s.upgrades + " שידרוגים · " : "") + s.alts + " חלופות"}
                     </button>
                     <button className="btn btn-ghost btn-sm" onClick={() => shareProject(p, flash)}>שיתוף</button>
                   </div>

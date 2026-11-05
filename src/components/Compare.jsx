@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 // השוואת לפני/אחרי. "לפני" מימין (תחילת הקריאה), "אחרי" משמאל, ותמונת לפני שקופה מעט כדי שיהיה ברור מה ישן ומה חדש.
 // מיקום הקו הוא משתנה CSS בשם --pos: במצב auto הוא נע לבד באנימציית CSS, ונעצר ברגע שנוגעים.
@@ -78,12 +78,79 @@ function CompareLayers({ before, after, beforeLabel, afterLabel, small, onRatio 
   );
 }
 
-// תמונה מונפשת לכרטיסים: אותה השוואה, בלי אינטראקציה. delay מפזר את הקצב בין כרטיסים.
+// תמונה מונפשת לכרטיסים: אותה השוואה, בלי אינטראקציה, בפרופורציה של התמונה (בלי חיתוך).
+// מאחוריה אותה תמונה מטושטשת ממלאת את המסגרת, כדי שלא יישאר שטח מת. delay מפזר את הקצב בין כרטיסים.
 export function CompareThumb({ before, after, afterLabel = "אחרי", delay = 0 }) {
+  const [ar, setAr] = useState(null);
   return (
-    <span className="cmp cmp-thumb auto" style={{ animationDelay: -delay + "s" }} aria-hidden="true">
-      <CompareLayers before={before} after={after} beforeLabel="לפני" afterLabel={afterLabel} small />
+    <span className="thumb-frame" aria-hidden="true">
+      {(after || before) && <img className="backdrop" src={after || before} alt="" loading="lazy" />}
+      <span className="cmp cmp-thumb auto" style={{ animationDelay: -delay + "s", ...(ar ? { "--ar": ar } : null) }}>
+        <CompareLayers before={before} after={after} beforeLabel="לפני" afterLabel={afterLabel} small onRatio={setAr} />
+      </span>
     </span>
+  );
+}
+
+function useSize() {
+  const [el, setEl] = useState(null);
+  const [size, setSize] = useState(null);
+  useEffect(() => {
+    if (!el) return;
+    const ro = new ResizeObserver(([e]) => setSize({ w: e.contentRect.width, h: e.contentRect.height }));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [el]);
+  return [setEl, size];
+}
+
+function useRatio(src) {
+  const [ar, setAr] = useState(null);
+  useEffect(() => {
+    if (!src) return;
+    const img = new Image();
+    img.onload = () => setAr(img.naturalWidth / img.naturalHeight);
+    img.src = src;
+  }, [src]);
+  return ar;
+}
+
+// במת השוואה שממלאת את כל השטח: ההשוואה במרכז, בגובה המלא ובפרופורציה של התמונה.
+// כשנשאר רוחב (תמונה לאורך על מסך רחב), "לפני" ו"אחרי" המלאים עומדים משני הצדדים, כדי שאף שוליים לא יישארו ריקים.
+export function CompareStage({ before, after, afterLabel = "אחרי", auto, sides = true }) {
+  const [ref, size] = useSize();
+  const ar = useRatio(before) || 4 / 3;
+  const gap = 16;
+  let cw = 0, ch = 0, sw = 0, sh = 0;
+  if (size) {
+    cw = Math.min(size.w, size.h * ar);
+    ch = cw / ar;
+    const rest = size.w - cw - 2 * gap;
+    if (sides && rest / 2 >= 150) {
+      sh = Math.min(size.h, rest / 2 / ar);
+      sw = sh * ar;
+    }
+  }
+  return (
+    <div ref={ref} className="cstage">
+      {size && sw > 0 && (
+        <figure className="cstage-side is-before" style={{ width: sw, height: sh }}>
+          <img className="cmp-before" src={before} alt="לפני" />
+          <figcaption className="cmp-tag cmp-tag-before">לפני</figcaption>
+        </figure>
+      )}
+      {size && (
+        <div className="cstage-center" style={{ width: cw, height: ch }}>
+          <CompareSlider before={before} after={after} afterLabel={afterLabel} auto={auto} />
+        </div>
+      )}
+      {size && sw > 0 && (
+        <figure className="cstage-side" style={{ width: sw, height: sh }}>
+          <img src={after} alt={afterLabel} />
+          <figcaption className="cmp-tag cmp-tag-after">{afterLabel}</figcaption>
+        </figure>
+      )}
+    </div>
   );
 }
 
