@@ -28,7 +28,7 @@ export default function App() {
   const store = useStore();
   const { projects, ready, save, cloud, commit, sync, flash } = store;
   const route = useRoute();
-  const [theme, setTheme] = useState(() => readLS(THEME_KEY, matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark"));
+  const [theme, setTheme] = useState(() => readLS(THEME_KEY, "light"));
   const [editing, setEditing] = useState(() => readLS(EDIT_KEY, "0") === "1");
   const [install, setInstall] = useState(null);
   const [snaps, setSnaps] = useState(null);
@@ -63,8 +63,8 @@ export default function App() {
   const cloudText = { syncing: "מסנכרן עם הענן...", synced: "מסונכרן · " + t.images + " תמונות", error: "הענן לא זמין, הכל שמור במכשיר" }[cloud.state] || "";
 
   const items = useMemo(() => [
-    { label: editing ? "יציאה ממצב עריכה" : "מצב עריכה", hint: editing ? "פעיל" : "הוספה, תיקון ומחיקה", pressed: editing, onSelect: () => setEditing((e) => !e) },
-    ...(editing ? [{ label: "פרויקט חדש", onSelect: () => go("new") }] : []),
+    { label: "פרויקט חדש", hint: "נושא, תמונות לפני וחלופות", onSelect: () => { setEditing(true); go("new"); } },
+    { label: editing ? "יציאה ממצב עריכה" : "מצב עריכה", hint: editing ? "פעיל" : "הוספה, תיקון ומחיקה בכל דף", pressed: editing, onSelect: () => setEditing((e) => !e) },
     { label: "סנכרון ענן", hint: "עכשיו", onSelect: () => sync() },
     { label: "הורדת גיבוי מלא", hint: t.projects + " פרויקטים, " + t.images + " תמונות", onSelect: () => downloadBackup(projects) },
     { label: "שחזור מקובץ גיבוי", hint: "ממזג, לא מוחק", onSelect: () => restoreInput.current?.click() },

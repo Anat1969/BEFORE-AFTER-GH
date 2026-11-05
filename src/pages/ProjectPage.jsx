@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { CompareSlider, CompareSide, CompareHold } from "../components/Compare.jsx";
+import { CompareSlider, CompareSide, CompareHold, CompareStage } from "../components/Compare.jsx";
+import { useFitMode } from "../lib/useFit.js";
 import { ConfirmButton, Editable, Empty, ImageDrop } from "../components/ui.jsx";
 import { STATUSES, statusLabel, updateProject, updateUpgrade, newId, emptyUpgrade, formatDate } from "../data/model.js";
 import { go } from "../lib/router.js";
@@ -17,6 +18,7 @@ export default function ProjectPage({ projects, route, editing, commit, flash })
   const p = projects.find((x) => x.id === route.id);
   const [mode, setMode] = useState(() => { try { return localStorage.getItem(MODE_KEY) || "slider"; } catch { return "slider"; } });
   const stage = useRef(null);
+  const fit = useFitMode();
 
   useEffect(() => { try { localStorage.setItem(MODE_KEY, mode); } catch { /* לא קריטי */ } }, [mode]);
 
@@ -46,22 +48,18 @@ export default function ProjectPage({ projects, route, editing, commit, flash })
 
   return (
     <div className="project">
-      <nav className="crumbs" aria-label="פירורי לחם">
-        <button className="link-plain" onClick={() => go("")}>בית</button>
-        <span aria-hidden="true">/</span>
-        <button className="link-plain" onClick={() => go("library")}>ספריה</button>
-        <span aria-hidden="true">/</span>
-        <span aria-current="page">{p.subject}</span>
-      </nav>
-
       <header className="project-head">
-        <div>
-          <span className="label">{formatDate(p)} · {p.upgrades.length} שידרוגים</span>
+        <div className="ph-title">
+          <nav className="crumbs" aria-label="פירורי לחם">
+            <button className="link-plain" onClick={() => go("library")}>ספריה</button>
+            <span aria-hidden="true">/</span>
+          </nav>
           {editing ? (
             <Editable editing value={p.subject} placeholder="נושא הפרויקט" className="h1-edit" onSave={(v) => v && saveProject((x) => ({ ...x, subject: v }))} />
           ) : (
             <h1>{p.subject}</h1>
           )}
+          <span className="label">{formatDate(p)} · {p.upgrades.length} שידרוגים · {p.upgrades.reduce((n, x) => n + x.alternatives.length, 0)} חלופות</span>
         </div>
         <div className="project-head-side">
           {editing ? (
@@ -136,38 +134,14 @@ export default function ProjectPage({ projects, route, editing, commit, flash })
                   ))}
                 </div>
               ) : (
-                <CompareSlider key={u.id + "-" + alt.id} before={u.beforeSrc} after={alt.afterSrc} afterLabel={alt.label} auto />
+                fit ? (
+                  <CompareStage key={u.id + "-" + alt.id} before={u.beforeSrc} after={alt.afterSrc} afterLabel={alt.label} auto />
+                ) : (
+                  <CompareSlider key={u.id + "-" + alt.id} before={u.beforeSrc} after={alt.afterSrc} afterLabel={alt.label} auto />
+                )
               )}
             </div>
 
-            {u.alternatives.length > 0 && (
-              <div className="alts" role="tablist" aria-label="חלופות">
-                {u.alternatives.map((a, i) => (
-                  <div key={a.id} className={"alt" + (i === ai ? " on" : "") + (u.chosenAltId === a.id ? " chosen" : "")}>
-                    <button className="alt-btn" role="tab" aria-selected={i === ai} onClick={() => at(ui, i)}>
-                      <img src={a.afterSrc} alt="" loading="lazy" />
-                      <span className="alt-name">{a.label}</span>
-                      {u.chosenAltId === a.id && <span className="alt-chosen label">נבחרה</span>}
-                    </button>
-                  </div>
-                ))}
-                {editing && (
-                  <ImageDrop
-                    compact
-                    multiple
-                    label="הוספת חלופות"
-                    hint="כמה תמונות יחד"
-                    onError={(m) => flash("error", m, 5000)}
-                    onImages={(srcs) =>
-                      saveUpgrade((x) => ({
-                        ...x,
-                        alternatives: [...x.alternatives, ...srcs.map((s, i) => ({ id: newId(), afterSrc: s, label: "חלופה " + (x.alternatives.length + i + 1) }))],
-                      }))
-                    }
-                  />
-                )}
-              </div>
-            )}
           </section>
 
           <aside className="info panel">
@@ -177,6 +151,37 @@ export default function ProjectPage({ projects, route, editing, commit, flash })
                 <Editable editing value={u.title} placeholder="כותרת השידרוג" onSave={(v) => saveUpgrade((x) => ({ ...x, title: v || x.title }))} />
               ) : (
                 <h2>{u.title}</h2>
+              )}
+            </div>
+            <div className="info-block">
+              <span className="label">חלופות · {u.alternatives.length}</span>
+              {(u.alternatives.length > 0 || editing) && (
+                <div className="alts" role="tablist" aria-label="חלופות">
+                  {u.alternatives.map((a, i) => (
+                    <div key={a.id} className={"alt" + (i === ai ? " on" : "") + (u.chosenAltId === a.id ? " chosen" : "")}>
+                      <button className="alt-btn" role="tab" aria-selected={i === ai} onClick={() => at(ui, i)}>
+                        <img src={a.afterSrc} alt="" loading="lazy" />
+                        <span className="alt-name">{a.label}</span>
+                        {u.chosenAltId === a.id && <span className="alt-chosen label">נבחרה</span>}
+                      </button>
+                    </div>
+                  ))}
+                  {editing && (
+                    <ImageDrop
+                      compact
+                      multiple
+                      label="הוספת חלופות"
+                      hint="כמה תמונות יחד"
+                      onError={(m) => flash("error", m, 5000)}
+                      onImages={(srcs) =>
+                        saveUpgrade((x) => ({
+                          ...x,
+                          alternatives: [...x.alternatives, ...srcs.map((s, i) => ({ id: newId(), afterSrc: s, label: "חלופה " + (x.alternatives.length + i + 1) }))],
+                        }))
+                      }
+                    />
+                  )}
+                </div>
               )}
             </div>
             {alt && (
