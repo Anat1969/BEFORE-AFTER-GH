@@ -13,7 +13,7 @@ const SORTS = [
   { key: "updated", label: "עודכן לאחרונה", fn: (a, b) => (b.updatedAt || 0) - (a.updatedAt || 0) },
 ];
 
-export default function Library({ projects, route, editing, flash }) {
+export default function Library({ projects, route, editing, flash, onNew }) {
   const [q, setQ] = useState(route.q.q || "");
   const [sort, setSort] = useState("new");
   const [open, setOpen] = useState(null);
@@ -34,8 +34,8 @@ export default function Library({ projects, route, editing, flash }) {
     return (
       <Empty
         title="הספריה ריקה"
-        text={editing ? "מתחילים בפרויקט הראשון: נושא, תמונת לפני וחלופה אחת מספיקים." : "כדי להוסיף פרויקט, פותחים את תפריט A&I ובוחרים מצב עריכה."}
-        action={editing && <button className="btn btn-primary" onClick={() => go("new")}>פרויקט ראשון</button>}
+        text="מתחילים בפרויקט הראשון: נושא, תמונת לפני וחלופה אחת מספיקים."
+        action={<button className="btn btn-primary" onClick={onNew}>פרויקט ראשון</button>}
       />
     );
 
@@ -63,6 +63,7 @@ export default function Library({ projects, route, editing, flash }) {
             {SORTS.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
           </select>
         </label>
+        <button className="btn btn-primary" onClick={onNew}>פרויקט חדש</button>
       </div>
 
       <p className="result-line label" aria-live="polite">{list.length === projects.length ? list.length + " פרויקטים" : list.length + " מתוך " + projects.length + " פרויקטים"}</p>
