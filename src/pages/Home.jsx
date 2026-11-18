@@ -9,7 +9,7 @@ const reduced = () => window.matchMedia("(prefers-reduced-motion: reduce)").matc
 
 // דף הבית כאולם הקרנה: מתחיל בפרויקט האחרון שעלה, ומתחלף לבד כל 10 שניות.
 // מימין העדשה (מה מחכה להחלטה, מה מוצג עכשיו), במרכז הבמה, ולמטה סרט עם כל הפרויקטים.
-export default function Home({ projects, editing }) {
+export default function Home({ projects, editing, onNew }) {
   const fit = useFitMode();
   const t = totals(projects);
   const reel = byNewest(projects).filter((p) => { const c = coverOf(p); return c.before && c.after; });
@@ -96,7 +96,7 @@ export default function Home({ projects, editing }) {
         <div className="home-links">
           <button className="btn btn-ghost" onClick={() => go("library")}>כל הספריה</button>
           <button className="btn btn-ghost" onClick={() => go("table")}>טבלת אנשי קשר</button>
-          {editing && <button className="btn btn-ghost" onClick={() => go("new")}>פרויקט חדש</button>}
+          <button className="btn btn-ghost" onClick={onNew}>פרויקט חדש</button>
         </div>
       </section>
 

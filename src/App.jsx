@@ -82,7 +82,8 @@ export default function App() {
     );
 
   const page = route.page;
-  const props = { projects, route, editing, commit, flash };
+  const newProject = () => { setEditing(true); go("new"); };
+  const props = { projects, route, editing, commit, flash, onNew: newProject };
 
   return (
     <div className="app">
@@ -116,7 +117,7 @@ export default function App() {
       )}
 
       <main className="main" key={page + (route.id || "")}>
-        {page === "home" && <Home projects={projects} editing={editing} />}
+        {page === "home" && <Home projects={projects} editing={editing} onNew={newProject} />}
         {page === "library" && <Library {...props} />}
         {page === "table" && <TablePage {...props} />}
         {page === "project" && <ProjectPage {...props} />}
